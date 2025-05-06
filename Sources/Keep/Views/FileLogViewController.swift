@@ -13,6 +13,7 @@ import UIKit
 public final class FileLogViewController: UIViewController {
     @ObservedObject var viewModel: FileLogViewModel
     private var cancellables = Set<AnyCancellable>()
+    private var hostingController: UIHostingController<FilterView>!
 
     private lazy var searchController: UISearchController = {
         let controller = UISearchController()
@@ -84,8 +85,8 @@ public final class FileLogViewController: UIViewController {
     }
 
     private func configureTableHeader() {
-        let filterView = FilterView()
-        let hostingController = UIHostingController(rootView: filterView)
+        let filterView = FilterView(selectedLevel: $viewModel.selectedLevel)
+        hostingController = UIHostingController(rootView: filterView)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
         hostingController.view.sizeToFit()
 
@@ -108,13 +109,14 @@ public final class FileLogViewController: UIViewController {
             }
             .store(in: &cancellables)
 
-        //        viewModel.$selectedLevel
-        //            .sink { [weak self] level in
-        //                DispatchQueue.main.async {
-        //                    self?.hostingController.view.setNeedsLayout()
-        //                }
-        //            }
-        //            .store(in: &cancellables)
+        viewModel.$selectedLevel
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] level in
+                let filterView = FilterView(selectedLevel: self?.$viewModel.selectedLevel ?? .constant(nil))
+                self?.hostingController.rootView = filterView
+                self?.hostingController.view.setNeedsLayout()
+            }
+            .store(in: &cancellables)
     }
 
     public override func viewWillAppear(_ animated: Bool) {

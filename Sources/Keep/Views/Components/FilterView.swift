@@ -11,7 +11,7 @@ import Logging
 @available(iOS 13.0, *)
 struct FilterView: View {
     let levels = Logger.Level.allCases
-    @State var selectedLevel: Logger.Level?
+    @Binding var selectedLevel: Logger.Level?
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
@@ -55,7 +55,8 @@ struct FilterView: View {
     }
 }
 
-@available(iOS 13.0, *)
+@available(iOS 17.0, *)
 #Preview {
-    FilterView()
+    @Previewable @State var selectedLevel: Logger.Level? = .debug
+    FilterView(selectedLevel: $selectedLevel)
 }

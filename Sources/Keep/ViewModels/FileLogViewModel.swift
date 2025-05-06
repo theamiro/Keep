@@ -43,6 +43,7 @@ public final class FileLogViewModel: ObservableObject {
             }
             .store(in: &cancellables)
         $selectedLevel
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.filterLogs()
             }
