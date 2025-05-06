@@ -1,0 +1,35 @@
+[
+	{
+		"file": "Keeper/ViewController.swift",
+		"line": 57,
+		"source": "Keeper",
+		"level": "error",
+		"metadata": { "hint": "Token expired or tampered", "target": "TokenValidator", "code": "401", "domain": "AuthService" },
+		"timestamp": "2025-04-20T07:27:16.162+0000",
+		"description": "Critical authentication failure",
+		"function": "loggerButtonTapped()",
+		"id": "CD89AF8C-6FAF-4D0D-A1A1-63A9CB19344D"
+	},
+    {
+        "file": "Keeper/ViewController.swift",
+        "line": 57,
+        "source": "Keeper",
+        "level": "error",
+        "metadata": { "hint": "Token expired or tampered", "target": "TokenValidator", "code": "401", "domain": "AuthService" },
+        "timestamp": "2025-04-20T07:27:16.162+0000",
+        "description": "Nothingness",
+        "function": "loggerButtonTapped()",
+        "id": "CD89AF8C-6FAF-4D0D-A1A1-63A9CB19344E"
+    },
+    {
+        "file": "Keeper/ViewController.swift",
+        "line": 57,
+        "source": "Keeper",
+        "level": "error",
+        "metadata": { "url": "https://apple.com/features", "method": "GET", "headers": { "Authorization": "Bearer {token}" }, "domain": "AuthService" },
+        "timestamp": "2025-04-20T07:27:16.162+0000",
+        "description": "Nothingness",
+        "function": "loggerButtonTapped()",
+        "id": "CD89AF8C-6FAF-4D0D-A1A1-63A9CB19344A"
+    }
+]
