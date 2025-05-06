@@ -88,13 +88,18 @@ public final class FileLogViewController: UIViewController {
         let filterView = FilterView(selectedLevel: $viewModel.selectedLevel)
         hostingController = UIHostingController(rootView: filterView)
         hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-        hostingController.view.sizeToFit()
+        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 44))
+        containerView.addSubview(hostingController.view)
 
         NSLayoutConstraint.activate([
-            hostingController.view.heightAnchor.constraint(equalToConstant: 44)
+            hostingController.view.topAnchor.constraint(equalTo: containerView.topAnchor),
+            hostingController.view.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            hostingController.view.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            hostingController.view.heightAnchor.constraint(equalToConstant: 44),
+            hostingController.view.widthAnchor.constraint(equalTo: containerView.widthAnchor),
         ])
 
-        tableView.tableHeaderView = hostingController.view
+        tableView.tableHeaderView = containerView
         addChild(hostingController)
         hostingController.didMove(toParent: self)
     }
