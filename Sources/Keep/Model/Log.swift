@@ -19,6 +19,30 @@ struct Log: Codable {
     public let function: String
     public let line: UInt
 
+    var tag: Tag {
+        if (metadata?.matches("http") != nil || metadata?.matches("url") != nil) {
+            return .network
+        }
+        if description.contains("deinit") || description.contains("deallocate") || description.contains("init") {
+            return .memory
+        }
+        return .unknown
+    }
+
+    enum Tag {
+        case network
+        case memory
+        case unknown
+
+        var title: String {
+            switch self {
+            case .network: "HTTP"
+            case .memory: "Memory"
+            case .unknown: "Unknown"
+            }
+        }
+    }
+
     init(
         id: String = UUID().uuidString,
         level: Logging.Logger.Level,

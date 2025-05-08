@@ -48,6 +48,12 @@ struct LogMetadataView: View {
         do {
             let jsonData = try jsonEncoder.encode(metadata)
             if let jsonString = String(data: jsonData, encoding: .utf8) {
+                if let data = jsonString.data(using: .utf8),
+                   let jsonObject = try? JSONSerialization.jsonObject(with: data),
+                   let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
+                   let prettyString = String(data: prettyData, encoding: .utf8) {
+                    return prettyString
+                }
                 return jsonString
             }
         } catch {

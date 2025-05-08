@@ -31,6 +31,18 @@ struct LogLogHeaderView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 4)
                 Divider()
+                HStack {
+                    Text("Tag")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(log.tag.title)
+                        .font(.system(size: 12, weight: .semibold))
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
+                Divider()
                 VStack(alignment: .leading) {
                     if let source = log.source {
                         HStack {

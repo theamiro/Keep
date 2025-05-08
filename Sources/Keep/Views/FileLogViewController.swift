@@ -195,6 +195,5 @@ extension FileLogViewController: UISearchResultsUpdating {
 @available(iOS 17.0, *)
 #Preview {
     UINavigationController(
-        rootViewController: FileLogViewController(
-            viewModel: FileLogViewModel(configuration: KeepConfiguration(logHandler: .inMemoryCache))))
+        rootViewController: FileLogViewController(viewModel: FileLogViewModel.preview))
 }

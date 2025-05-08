@@ -22,6 +22,10 @@ public final class FileLogViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
+    static var preview: FileLogViewModel {
+        return FileLogViewModel(configuration: .init(logHandler: .fileSystem("preview"), logLevel: .trace))
+    }
+
     public init(configuration: KeepConfiguration) {
         self.configuration = configuration
         switch configuration.logHandler {

@@ -1,0 +1,12 @@
+name: Build Validation
+on:
+    pull_request:
+        branches: ["main"]
+jobs:
+    build:
+        runs-on: macos-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+            - name: Perform Build Validation
+              run: swift build -v
