@@ -1,4 +1,4 @@
-# Swift Text Utility Library
+# Swift Keep Library
 
 <p align="left">
 <img src="https://github.com/theamiro/Keep/actions/workflows/build.yml/badge.svg" />
