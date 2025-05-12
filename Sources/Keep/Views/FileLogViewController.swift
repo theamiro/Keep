@@ -29,6 +29,7 @@ public final class FileLogViewController: UIViewController {
         button.tintColor = .white
         button.backgroundColor = .systemBlue
         button.layer.cornerRadius = 28
+        button.tag = -1
         return button
     }()
 
@@ -44,6 +45,7 @@ public final class FileLogViewController: UIViewController {
         tableView.estimatedRowHeight = 80
         tableView.rowHeight = UITableView.automaticDimension
         tableView.register(LogCell.self, forCellReuseIdentifier: "logCell")
+        tableView.register(ContentUnavailableCell.self, forCellReuseIdentifier: "contentUnavailableCell")
         tableView.delegate = self
         tableView.dataSource = self
         tableView.refreshControl = refreshControl
@@ -62,7 +64,6 @@ public final class FileLogViewController: UIViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
         view.addSubview(tableView)
-        view.addSubview(clearButton)
         view.backgroundColor = .systemBackground
 
         navigationItem.searchController = searchController
@@ -72,16 +73,27 @@ public final class FileLogViewController: UIViewController {
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-
-            clearButton.heightAnchor.constraint(equalToConstant: 56),
-            clearButton.widthAnchor.constraint(equalToConstant: 56),
-            clearButton.bottomAnchor.constraint(
-                equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-            clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
         ])
 
         configureTableHeader()
         configureObservers()
+    }
+
+    private func configureClearButton() {
+        if viewModel.logs.count < 1 {
+            clearButton.removeFromSuperview()
+        } else {
+            guard (view.subviews.first(where: { ($0 as? UIButton)?.tag == -1 }) == nil) else {
+                return
+            }
+            view.addSubview(clearButton)
+            NSLayoutConstraint.activate([
+                clearButton.heightAnchor.constraint(equalToConstant: 56),
+                clearButton.widthAnchor.constraint(equalToConstant: 56),
+                clearButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+                clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+            ])
+        }
     }
 
     private func configureTableHeader() {
@@ -111,6 +123,7 @@ public final class FileLogViewController: UIViewController {
                 guard let self else { return }
                 self.tableView.reloadData()
                 self.title = "Logs (\(self.viewModel.logs.count))"
+                configureClearButton()
             }
             .store(in: &cancellables)
 
@@ -160,27 +173,68 @@ public final class FileLogViewController: UIViewController {
 @available(iOS 13.0, *)
 extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        if viewModel.logs.count == 0 {
+            return 1
+        }
         return viewModel.logs.count
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard
-            let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath)
-                as? LogCell
-        else {
-            let tableViewCell = UITableViewCell()
-            tableViewCell.textLabel?.text = viewModel.logs[indexPath.row].description
-            return tableViewCell
+        if viewModel.logs.count == 0 {
+            return configureContentUnavailableCell(with: tableView, indexPath: indexPath)
+        } else {
+            return configureLogCell(with: tableView, indexPath: indexPath)
         }
-        cell.configure(with: viewModel.logs[indexPath.row], parent: self)
-        return cell
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        guard viewModel.logs.count > 0 else { return }
         let log = viewModel.logs[indexPath.row]
         let controller = LogDetailsViewController(log: log)
         navigationController?.pushViewController(controller, animated: true)
+    }
+
+    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        if viewModel.logs.count == 0 {
+            return tableView.frame.height - 128
+        }
+        return UITableView.automaticDimension
+    }
+
+    private func configureContentUnavailableCell(with tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "contentUnavailableCell", for: indexPath) as? ContentUnavailableCell else {
+            return UITableViewCell()
+        }
+        var title: LocalizedStringKey = "No logs available yet"
+        var description: LocalizedStringKey = "Continue using the application\nto view logs later."
+        if !viewModel.searchTerm.isEmpty && viewModel.selectedLevel != nil {
+            title = "No logs matching search criteria"
+            description = "Try searching for a different term \"\(viewModel.searchTerm)\" or selecting a different log level from \"\(viewModel.selectedLevel?.rawValue ?? "Filter")\""
+        } else if !viewModel.searchTerm.isEmpty {
+            title = "No logs matching \"\(viewModel.searchTerm)\""
+            description = "Try searching for a different term."
+        } else if viewModel.selectedLevel != nil {
+            title = "No logs matching \"\(viewModel.selectedLevel?.rawValue ?? "Filter")\""
+            description = "Try selecting a different log level"
+        }
+        let model = ContentUnavailableModel(title: title, systemImage: "tray.fill", description: description)
+        tableView.separatorColor = .clear
+        tableView.allowsSelection = false
+        cell.configure(with: model, parent: self)
+        return cell
+    }
+
+    private func configureLogCell(with tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath) as? LogCell else {
+            let tableViewCell = UITableViewCell()
+            tableViewCell.textLabel?.text = viewModel.logs[indexPath.row].description
+            return tableViewCell
+        }
+        tableView.separatorColor = .separator
+        tableView.allowsSelection = true
+        cell.configure(with: viewModel.logs[indexPath.row], parent: self)
+        return cell
     }
 }
 
