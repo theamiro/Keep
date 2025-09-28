@@ -239,6 +239,62 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         }
         return cell
     }
+
+    public func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard viewModel.logs.indices.contains(indexPath.row) else {
+            return nil
+        }
+        let log = viewModel.logs[indexPath.row]
+        let actionTitle = log.pinned ? "Unpin" : "Pin"
+        let imageName = log.pinned ? "pin.slash" : "pin"
+        let bookmarkAction = UIContextualAction(style: .normal, title: actionTitle) { [weak self] _, _, completion in
+            guard let self else {
+                completion(false)
+                return
+            }
+            Task {
+                await self.viewModel.togglePin(for: log.id)
+                await MainActor.run {
+                    completion(true)
+                }
+            }
+        }
+        bookmarkAction.image = UIImage(systemName: imageName)
+        let config = UISwipeActionsConfiguration(actions: [bookmarkAction])
+        config.performsFirstActionWithFullSwipe = true
+        return config
+    }
+
+    public func tableView(
+        _ tableView: UITableView,
+        trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+
+        guard viewModel.logs.indices.contains(indexPath.row) else {
+            return nil
+        }
+        let log = viewModel.logs[indexPath.row]
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+            guard let self else {
+                completion(false)
+                return
+            }
+            Task {
+                await self.viewModel.deleteLog(withID: log.id)
+                await MainActor.run {
+                    completion(true)
+                }
+            }
+        }
+        deleteAction.image = UIImage(systemName: "trash")
+
+        let config = UISwipeActionsConfiguration(actions: [deleteAction])
+        config.performsFirstActionWithFullSwipe = true
+        return config
+    }
 }
 
 extension FileLogViewController: UISearchResultsUpdating {
@@ -271,7 +327,6 @@ final class HostingTableViewCell<Content: View>: UITableViewCell {
 
     @MainActor
     deinit {
-        // remove parent
         removeHostingControllerFromParent()
     }
 

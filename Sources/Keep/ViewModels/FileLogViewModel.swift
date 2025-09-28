@@ -9,6 +9,7 @@ import Foundation
 import Logging
 import Combine
 
+@MainActor
 public final class FileLogViewModel: ObservableObject {
     private let loggingSource: LoggingSource
     private let configuration: KeepConfiguration
@@ -55,8 +56,8 @@ public final class FileLogViewModel: ObservableObject {
 
     func fetchLogs() {
         let fetchedLogs = loggingSource.fetch()
-        allLogs = fetchedLogs
-        logs = fetchedLogs
+        allLogs = sortLogs(fetchedLogs)
+        filterLogs()
     }
 
     func clearLogs(completion: @escaping () -> Void) {
@@ -65,12 +66,40 @@ public final class FileLogViewModel: ObservableObject {
         }
     }
 
+    func togglePin(for logID: String) async {
+        guard let existingLogIndex = allLogs.firstIndex(where: { $0.id == logID }) else {
+            return
+        }
+        var updatedLog = allLogs[existingLogIndex]
+        updatedLog.pinned.toggle()
+        loggingSource.update(log: updatedLog)
+        let refreshedLogs = loggingSource.fetch()
+        allLogs = sortLogs(refreshedLogs)
+        filterLogs()
+    }
+
+    func deleteLog(withID logID: String) async {
+        loggingSource.deleteLog(withID: logID)
+        let refreshedLogs = loggingSource.fetch()
+        allLogs = sortLogs(refreshedLogs)
+        filterLogs()
+    }
+
     private func filterLogs() {
-        logs = allLogs.filter { [weak self] log in
-            guard let self = self else { return false }
+        let filtered = allLogs.filter { log in
             let matchesSearch = searchTerm.isEmpty || log.matches(searchTerm)
             let matchesLevel = selectedLevel == nil || log.level == selectedLevel
             return matchesSearch && matchesLevel
+        }
+        logs = sortLogs(filtered)
+    }
+
+    private func sortLogs(_ logs: [Log]) -> [Log] {
+        logs.sorted { lhs, rhs in
+            if lhs.pinned != rhs.pinned {
+                return lhs.pinned && !rhs.pinned
+            }
+            return lhs.timestamp > rhs.timestamp
         }
     }
 }

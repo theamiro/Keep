@@ -18,6 +18,7 @@ struct Log: Codable {
     public let file: String
     public let function: String
     public let line: UInt
+    public var pinned: Bool
 
     var tag: Tag {
         if (metadata?.matches("http") != nil || metadata?.matches("url") != nil) {
@@ -52,7 +53,8 @@ struct Log: Codable {
         source: String? = nil,
         file: String = #fileID,
         function: String = #function,
-        line: UInt = #line
+        line: UInt = #line,
+        pinned: Bool = false
     ) {
         self.id = id
         self.level = level
@@ -63,6 +65,7 @@ struct Log: Codable {
         self.file = file
         self.function = function
         self.line = line
+        self.pinned = pinned
     }
 
     enum CodingKeys: String, CodingKey {
@@ -75,6 +78,7 @@ struct Log: Codable {
         case file
         case function
         case line
+        case pinned
     }
 
     init(from decoder: any Decoder) throws {
@@ -93,6 +97,7 @@ struct Log: Codable {
         self.file = try container.decode(String.self, forKey: .file)
         self.function = try container.decode(String.self, forKey: .function)
         self.line = try container.decode(UInt.self, forKey: .line)
+        self.pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
     }
 
     func encode(to encoder: any Encoder) throws {
@@ -108,6 +113,7 @@ struct Log: Codable {
         try container.encode(self.file, forKey: .file)
         try container.encode(self.function, forKey: .function)
         try container.encode(self.line, forKey: .line)
+        try container.encode(self.pinned, forKey: .pinned)
     }
 
     private func sanitized(_ metadata: Logger.Metadata? = nil) -> Logger.Metadata? {

@@ -118,6 +118,8 @@ public struct KeepConfiguration {
 
 protocol LoggingSource {
     func store(_ log: Log)
+    func update(log: Log)
+    func deleteLog(withID id: String)
     func flush(completion: () -> Void)
     func fetch() -> [Log]
 }
@@ -127,6 +129,14 @@ class CacheLoggingSource: LoggingSource {
     func store(_ log: Log) {
         cache.insert(log, forKey: log.id)
         print("Stored in Cache Log \(log.id)")
+    }
+
+    func update(log: Log) {
+        cache.insert(log, forKey: log.id)
+    }
+
+    func deleteLog(withID id: String) {
+        cache.removeValue(forKey: id)
     }
 
     func flush(completion: () -> Void) {
@@ -153,24 +163,33 @@ class FileLoggingSource: LoggingSource {
         guard !isRunningInPreview else {
             return
         }
-        var logs: [Log] = []
-
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            do {
-                let data = try Data(contentsOf: fileURL)
-                logs = try JSONDecoder().decode([Log].self, from: data)
-            } catch {
-                print("Failed to read or decode logs: \(error)")
-            }
-        }
+        var logs = loadLogs()
         logs.append(log)
-        do {
-            let data = try JSONEncoder().encode(logs)
-            try data.write(to: fileURL, options: [.atomicWrite])
-            print("Log appended to file. \(fileURL.absoluteString)")
-        } catch {
-            print("Failed to write updated log file: \(error)")
+        persist(logs)
+    }
+
+    func update(log: Log) {
+        guard !isRunningInPreview else {
+            return
         }
+        var logs = loadLogs()
+        guard let index = logs.firstIndex(where: { $0.id == log.id }) else {
+            return
+        }
+        logs[index] = log
+        persist(logs)
+    }
+
+    func deleteLog(withID id: String) {
+        guard !isRunningInPreview else {
+            return
+        }
+        let logs = loadLogs()
+        let newLogs = logs.filter { $0.id != id }
+        guard newLogs.count != logs.count else {
+            return
+        }
+        persist(newLogs)
     }
 
     func flush(completion: () -> Void) {
@@ -194,9 +213,7 @@ class FileLoggingSource: LoggingSource {
             }
             do {
                 let fileData = try Data(contentsOf: bundledURL)
-                return try JSONDecoder().decode([Log].self, from: fileData).sorted(by: {
-                    $0.timestamp > $1.timestamp
-                })
+                return sortLogs(try JSONDecoder().decode([Log].self, from: fileData))
             } catch {
                 print(error)
                 return []
@@ -208,12 +225,42 @@ class FileLoggingSource: LoggingSource {
         }
         do {
             let fileData = try Data(contentsOf: fileURL)
-            return try JSONDecoder().decode([Log].self, from: fileData).sorted(by: {
-                $0.timestamp > $1.timestamp
-            })
+            return sortLogs(try JSONDecoder().decode([Log].self, from: fileData))
         } catch {
             print(error)
             return []
+        }
+    }
+
+    private func loadLogs() -> [Log] {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return []
+        }
+        do {
+            let data = try Data(contentsOf: fileURL)
+            return try JSONDecoder().decode([Log].self, from: data)
+        } catch {
+            print("Failed to read or decode logs: \(error)")
+            return []
+        }
+    }
+
+    private func persist(_ logs: [Log]) {
+        do {
+            let data = try JSONEncoder().encode(logs)
+            try data.write(to: fileURL, options: [.atomicWrite])
+            print("Log file updated. \(fileURL.absoluteString)")
+        } catch {
+            print("Failed to write updated log file: \(error)")
+        }
+    }
+
+    private func sortLogs(_ logs: [Log]) -> [Log] {
+        logs.sorted { lhs, rhs in
+            if lhs.pinned != rhs.pinned {
+                return lhs.pinned && !rhs.pinned
+            }
+            return lhs.timestamp > rhs.timestamp
         }
     }
 
