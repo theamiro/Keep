@@ -8,7 +8,6 @@
 import SwiftUI
 import Logging
 
-@available(iOS 13.0, *)
 extension Logging.Logger.Level {
     public var color: Color {
         switch self {

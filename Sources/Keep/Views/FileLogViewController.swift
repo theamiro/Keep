@@ -9,7 +9,6 @@ import Combine
 import SwiftUI
 import UIKit
 
-@available(iOS 13.0, *)
 public final class FileLogViewController: UIViewController {
     @ObservedObject var viewModel: FileLogViewModel
     private var cancellables = Set<AnyCancellable>()
@@ -23,11 +22,16 @@ public final class FileLogViewController: UIViewController {
 
     private lazy var clearButton: UIButton = {
         let button = UIButton()
+        if #available(iOS 26.0, *) {
+            button.configuration = .prominentGlass()
+            button.tintColor = .systemBlue
+        } else {
+            button.tintColor = .systemBlue
+        }
+        button.accessibilityLabel = "Clear Logs"
         button.setImage(UIImage(systemName: "trash.fill"), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(presentAlertView), for: .touchUpInside)
-        button.tintColor = .white
-        button.backgroundColor = .systemBlue
         button.layer.cornerRadius = 28
         button.tag = -1
         return button
@@ -39,12 +43,19 @@ public final class FileLogViewController: UIViewController {
         return control
     }()
 
+    private lazy var filterView: UIView = {
+        let filterView = FilterView(selectedLevel: $viewModel.selectedLevel)
+        hostingController = UIHostingController(rootView: filterView)
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+        return hostingController.view
+    }()
+
     private lazy var tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.estimatedRowHeight = 80
+        tableView.estimatedRowHeight = 96
         tableView.rowHeight = UITableView.automaticDimension
-        tableView.register(LogCell.self, forCellReuseIdentifier: "logCell")
+        tableView.register(HostingTableViewCell<LogViewCell>.self, forCellReuseIdentifier: "logCell")
         tableView.register(ContentUnavailableCell.self, forCellReuseIdentifier: "contentUnavailableCell")
         tableView.delegate = self
         tableView.dataSource = self
@@ -63,19 +74,24 @@ public final class FileLogViewController: UIViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        view.addSubview(filterView)
         view.addSubview(tableView)
         view.backgroundColor = .systemBackground
 
         navigationItem.searchController = searchController
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            tableView.topAnchor.constraint(equalTo: filterView.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-        ])
 
-        configureTableHeader()
+            filterView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            filterView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            filterView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            filterView.heightAnchor.constraint(equalToConstant: 44),
+            filterView.widthAnchor.constraint(equalTo: view.widthAnchor),
+        ])
         configureObservers()
     }
 
@@ -88,32 +104,12 @@ public final class FileLogViewController: UIViewController {
             }
             view.addSubview(clearButton)
             NSLayoutConstraint.activate([
-                clearButton.heightAnchor.constraint(equalToConstant: 56),
-                clearButton.widthAnchor.constraint(equalToConstant: 56),
-                clearButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-                clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
+                clearButton.heightAnchor.constraint(equalToConstant: 48),
+                clearButton.widthAnchor.constraint(equalToConstant: 48),
+                clearButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -12),
+                clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24)
             ])
         }
-    }
-
-    private func configureTableHeader() {
-        let filterView = FilterView(selectedLevel: $viewModel.selectedLevel)
-        hostingController = UIHostingController(rootView: filterView)
-        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
-        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: view.frame.width, height: 44))
-        containerView.addSubview(hostingController.view)
-
-        NSLayoutConstraint.activate([
-            hostingController.view.topAnchor.constraint(equalTo: containerView.topAnchor),
-            hostingController.view.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            hostingController.view.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            hostingController.view.heightAnchor.constraint(equalToConstant: 44),
-            hostingController.view.widthAnchor.constraint(equalTo: containerView.widthAnchor),
-        ])
-
-        tableView.tableHeaderView = containerView
-        addChild(hostingController)
-        hostingController.didMove(toParent: self)
     }
 
     private func configureObservers() {
@@ -170,7 +166,6 @@ public final class FileLogViewController: UIViewController {
     }
 }
 
-@available(iOS 13.0, *)
 extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if viewModel.logs.count == 0 {
@@ -226,19 +221,25 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     private func configureLogCell(with tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath) as? LogCell else {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath) as? HostingTableViewCell<LogViewCell> else {
             let tableViewCell = UITableViewCell()
             tableViewCell.textLabel?.text = viewModel.logs[indexPath.row].description
             return tableViewCell
         }
         tableView.separatorColor = .separator
         tableView.allowsSelection = true
-        cell.configure(with: viewModel.logs[indexPath.row], parent: self)
+        if #available(iOS 16.0, *) {
+            cell.contentConfiguration = UIHostingConfiguration {
+                LogViewCell(log: viewModel.logs[indexPath.row])
+            }
+        } else {
+            #warning("Resolve sizing issue pre-iOS 16")
+            cell.host(LogViewCell(log: viewModel.logs[indexPath.row]), parent: self)
+        }
         return cell
     }
 }
 
-@available(iOS 13.0, *)
 extension FileLogViewController: UISearchResultsUpdating {
     public func updateSearchResults(for searchController: UISearchController) {
         let searchText = searchController.searchBar.text ?? ""
@@ -250,4 +251,55 @@ extension FileLogViewController: UISearchResultsUpdating {
 #Preview {
     UINavigationController(
         rootViewController: FileLogViewController(viewModel: FileLogViewModel.preview))
+}
+
+final class HostingTableViewCell<Content: View>: UITableViewCell {
+    private let hostingController = UIHostingController<Content?>(rootView: nil)
+
+    override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        hostingController.view.backgroundColor = .clear
+    }
+
+    @MainActor
+    private func removeHostingControllerFromParent() {
+        hostingController.willMove(toParent: nil)
+        hostingController.view.removeFromSuperview()
+        hostingController.removeFromParent()
+    }
+
+    @MainActor
+    deinit {
+        // remove parent
+        removeHostingControllerFromParent()
+    }
+
+    @available(*, unavailable)
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func host(_ rootView: Content, parent: UIViewController) {
+        hostingController.rootView = rootView
+        hostingController.view.invalidateIntrinsicContentSize()
+
+        let requiresControllerMove = hostingController.parent != parent
+        if requiresControllerMove {
+            removeHostingControllerFromParent()
+            parent.addChild(hostingController)
+        }
+
+        if !contentView.subviews.contains(hostingController.view) {
+            contentView.addSubview(hostingController.view)
+            hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+            hostingController.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor).isActive = true
+            hostingController.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor).isActive = true
+            hostingController.view.topAnchor.constraint(equalTo: contentView.topAnchor).isActive = true
+            hostingController.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor).isActive = true
+        }
+
+        if requiresControllerMove {
+            hostingController.didMove(toParent: parent)
+        }
+    }
 }

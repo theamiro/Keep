@@ -9,7 +9,6 @@ import Foundation
 import Logging
 import Combine
 
-@available(iOS 13.0, *)
 public final class FileLogViewModel: ObservableObject {
     private let loggingSource: LoggingSource
     private let configuration: KeepConfiguration
@@ -23,7 +22,7 @@ public final class FileLogViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     static var preview: FileLogViewModel {
-        return FileLogViewModel(configuration: .init(logHandler: .fileSystem("preview"), logLevel: .trace))
+        FileLogViewModel(configuration: .init(logHandler: .fileSystem("log.json"), logLevel: .trace))
     }
 
     public init(configuration: KeepConfiguration) {

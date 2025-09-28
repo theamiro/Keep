@@ -8,14 +8,12 @@
 import UIKit
 import SwiftUI
 
-@available(iOS 13.0, *)
 struct ContentUnavailableModel {
     let title: LocalizedStringKey
     let systemImage: String
     let description: LocalizedStringKey
 }
 
-@available(iOS 13.0, *)
 struct KeepContentUnavailableView: View {
     let model: ContentUnavailableModel
     var body: some View {
@@ -48,12 +46,10 @@ struct KeepContentUnavailableView: View {
     }
 }
 
-@available(iOS 13.0, *)
 #Preview {
     KeepContentUnavailableView(model: ContentUnavailableModel(title: "No logs available yet", systemImage: "tray.fill", description: "Continue using the application\nto view logs later."))
 }
 
-@available(iOS 13.0, *)
 final class ContentUnavailableCell: UITableViewCell {
     private var hostController: UIHostingController<KeepContentUnavailableView>?
     func configure(with model: ContentUnavailableModel, parent: UIViewController) {

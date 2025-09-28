@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "Keep",
+    platforms: [
+        .iOS(.v13)
+    ],
     products: [
         .library(
             name: "Keep", targets: ["Keep"]

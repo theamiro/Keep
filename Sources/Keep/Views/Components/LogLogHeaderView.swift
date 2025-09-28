@@ -8,7 +8,7 @@
 import SwiftUI
 import Logging
 
-@available(iOS 13.0, *)
+
 struct LogLogHeaderView: View {
     var log: Log
     var body: some View {
@@ -110,7 +110,7 @@ struct LogLogHeaderView: View {
     }
 }
 
-@available(iOS 13.0, *)
+
 #Preview {
     LogLogHeaderView(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
         "url": .string("https://api.example.com"),

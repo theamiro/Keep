@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-@available(iOS 13.0, *)
 struct LogViewCell: View {
     var log: Log
     var body: some View {
@@ -59,12 +58,10 @@ struct LogViewCell: View {
             .font(.system(size: 12.0))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 8)
+        .id(log.id)
     }
 }
 
-@available(iOS 13.0, *)
 #Preview("Log View Cell") {
     LogViewCell(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: nil, source: "Somewhere"))
     LogViewCell(log: Log(id: "647474", level: .info, description: "Something crazy went wrong", timestamp: Date(), metadata: [

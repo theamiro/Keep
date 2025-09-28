@@ -8,7 +8,6 @@
 import SwiftUI
 import Logging
 
-@available(iOS 13.0, *)
 struct FilterView: View {
     let levels = Logger.Level.allCases
     @Binding var selectedLevel: Logger.Level?

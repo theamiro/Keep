@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-@available(iOS 13.0, *)
 struct TitleHeaderView: View {
     let title: String
     var body: some View {
@@ -18,7 +17,6 @@ struct TitleHeaderView: View {
     }
 }
 
-@available(iOS 13.0, *)
 #Preview {
     TitleHeaderView(title: "Metadata")
         .padding(.horizontal)

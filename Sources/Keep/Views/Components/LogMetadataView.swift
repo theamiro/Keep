@@ -8,7 +8,6 @@
 import SwiftUI
 import Logging
 
-@available(iOS 13.0, *)
 struct LogMetadataView: View {
     var metadata: Logger.Metadata
     var body: some View {
@@ -63,7 +62,6 @@ struct LogMetadataView: View {
     }
 }
 
-@available(iOS 13.0, *)
 #Preview {
     LogMetadataView(metadata: [
         "url": .string("https://api.example.com"),

@@ -7,7 +7,6 @@
 
 import UIKit
 
-@available(iOS 13.0, *)
 final class LogDetailsViewController: UIViewController {
     var log: Log
 
@@ -58,11 +57,15 @@ final class LogDetailsViewController: UIViewController {
         view.addSubview(toolbarContainer)
 
         let shareButton = UIButton(type: .system)
+        if #available(iOS 26.0, *) {
+            shareButton.configuration = .prominentGlass()
+            shareButton.configuration?.cornerStyle = .capsule
+        }
         shareButton.setTitle("Share", for: .normal)
-        shareButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        shareButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
         shareButton.backgroundColor = UIColor.systemBlue
         shareButton.setTitleColor(UIColor.white, for: .normal)
-        shareButton.layer.cornerRadius = 8
+        shareButton.layer.cornerRadius = 24
         shareButton.addTarget(self, action: #selector(shareButtonTapped), for: .touchUpInside)
 
         toolbarContainer.addSubview(shareButton)
@@ -82,7 +85,8 @@ final class LogDetailsViewController: UIViewController {
         ])
     }
 
-    @objc private func shareButtonTapped() {
+    @objc
+    private func shareButtonTapped() {
         let items: [Any] = [log.description]
         let activityController = UIActivityViewController(activityItems: items, applicationActivities: nil)
         navigationController?.present(activityController, animated: true)
@@ -110,7 +114,6 @@ final class LogDetailsViewController: UIViewController {
     }
 }
 
-@available(iOS 13.0, *)
 extension LogDetailsViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     func numberOfSections(in collectionView: UICollectionView) -> Int {
         return 2
@@ -154,12 +157,12 @@ extension LogDetailsViewController: UICollectionViewDataSource, UICollectionView
 
 @available(iOS 17.0, *)
 #Preview {
-    LogDetailsViewController(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
+    UINavigationController(rootViewController: LogDetailsViewController(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
         "url": .string("https://api.example.com"),
         "method": .string("GET"),
         "headers": .dictionary([
-            "Authorization": .string("Bearer ***"),
+            "Authorization": .string("Bearer 12345678393933636376373"),
             "Content-Type": .string("application/json")
         ])
-    ], source: "Somewhere"))
+    ], source: "Somewhere")))
 }
