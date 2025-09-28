@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/theamiro/Keep",
       "state" : {
-        "branch" : "develop",
-        "revision" : "d42733b8b6a7b9488b0ff7f36eb39f52bd0887ec"
+        "branch" : "feature/add-example-and-crud",
+        "revision" : "6a77d517d553bf0491734084648e6d38eef43b6c"
       }
     },
     {

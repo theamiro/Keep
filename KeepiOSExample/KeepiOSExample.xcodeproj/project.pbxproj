@@ -360,7 +360,7 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/theamiro/Keep";
 			requirement = {
-				branch = develop;
+				branch = "feature/add-example-and-crud";
 				kind = branch;
 			};
 		};

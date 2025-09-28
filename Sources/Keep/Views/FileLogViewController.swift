@@ -14,6 +14,7 @@ public final class FileLogViewController: UIViewController {
     @ObservedObject var viewModel: FileLogViewModel
     private var cancellables = Set<AnyCancellable>()
     private var hostingController: UIHostingController<FilterView>!
+    private var sectionedLogs: [(title: String, logs: [Log])] = []
 
     private lazy var searchController: UISearchController = {
         let controller = UISearchController()
@@ -118,6 +119,7 @@ public final class FileLogViewController: UIViewController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
+                self.sectionedLogs = Self.makeSections(from: self.viewModel.logs)
                 self.tableView.reloadData()
                 self.title = "Logs (\(self.viewModel.logs.count))"
                 configureClearButton()
@@ -168,31 +170,44 @@ public final class FileLogViewController: UIViewController {
 }
 
 extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
+    public func numberOfSections(in tableView: UITableView) -> Int {
+        sectionedLogs.isEmpty ? 1 : sectionedLogs.count
+    }
+
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if viewModel.logs.count == 0 {
+        if sectionedLogs.isEmpty {
             return 1
         }
-        return viewModel.logs.count
+        guard sectionedLogs.indices.contains(section) else {
+            return 0
+        }
+        return sectionedLogs[section].logs.count
     }
 
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        if viewModel.logs.count == 0 {
+        if sectionedLogs.isEmpty {
             return configureContentUnavailableCell(with: tableView, indexPath: indexPath)
         } else {
             return configureLogCell(with: tableView, indexPath: indexPath)
         }
     }
 
+    public func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
+        guard sectionedLogs.indices.contains(section) else {
+            return nil
+        }
+        return sectionedLogs[section].title
+    }
+
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        guard viewModel.logs.count > 0 else { return }
-        let log = viewModel.logs[indexPath.row]
+        guard let log = log(for: indexPath) else { return }
         let controller = LogDetailsViewController(log: log)
         navigationController?.pushViewController(controller, animated: true)
     }
 
     public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        if viewModel.logs.count == 0 {
+        if sectionedLogs.isEmpty {
             return tableView.frame.height - 128
         }
         return UITableView.automaticDimension
@@ -222,20 +237,23 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
     }
 
     private func configureLogCell(with tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
+        guard let log = log(for: indexPath) else {
+            return UITableViewCell()
+        }
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath) as? HostingTableViewCell<LogViewCell> else {
             let tableViewCell = UITableViewCell()
-            tableViewCell.textLabel?.text = viewModel.logs[indexPath.row].description
+            tableViewCell.textLabel?.text = log.description
             return tableViewCell
         }
         tableView.separatorColor = .separator
         tableView.allowsSelection = true
         if #available(iOS 16.0, *) {
             cell.contentConfiguration = UIHostingConfiguration {
-                LogViewCell(log: viewModel.logs[indexPath.row])
+                LogViewCell(log: log)
             }
         } else {
             #warning("Resolve sizing issue pre-iOS 16")
-            cell.host(LogViewCell(log: viewModel.logs[indexPath.row]), parent: self)
+            cell.host(LogViewCell(log: log), parent: self)
         }
         return cell
     }
@@ -244,10 +262,9 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         _ tableView: UITableView,
         leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
-        guard viewModel.logs.indices.contains(indexPath.row) else {
+        guard let log = log(for: indexPath) else {
             return nil
         }
-        let log = viewModel.logs[indexPath.row]
         let actionTitle = log.pinned ? "Unpin" : "Pin"
         let imageName = log.pinned ? "pin.slash" : "pin"
         let bookmarkAction = UIContextualAction(style: .normal, title: actionTitle) { [weak self] _, _, completion in
@@ -273,10 +290,9 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath
     ) -> UISwipeActionsConfiguration? {
 
-        guard viewModel.logs.indices.contains(indexPath.row) else {
+        guard let log = log(for: indexPath) else {
             return nil
         }
-        let log = viewModel.logs[indexPath.row]
         let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
             guard let self else {
                 completion(false)
@@ -308,6 +324,44 @@ extension FileLogViewController: UISearchResultsUpdating {
 #Preview {
     UINavigationController(
         rootViewController: FileLogViewController(viewModel: FileLogViewModel.preview))
+}
+
+private extension FileLogViewController {
+    static func makeSections(from logs: [Log]) -> [(title: String, logs: [Log])] {
+        guard !logs.isEmpty else { return [] }
+        let pinnedLogs = logs.filter { $0.pinned }
+        let unpinnedLogs = logs.filter { !$0.pinned }
+
+        var sections: [(title: String, logs: [Log])] = []
+
+        if !pinnedLogs.isEmpty {
+            sections.append((title: "Pinned", logs: pinnedLogs))
+        }
+
+        let allSectionLogs: [Log]
+        if pinnedLogs.isEmpty {
+            allSectionLogs = logs
+        } else {
+            allSectionLogs = unpinnedLogs
+        }
+
+        if !allSectionLogs.isEmpty {
+            sections.append((title: "All", logs: allSectionLogs))
+        }
+
+        return sections
+    }
+
+    func log(for indexPath: IndexPath) -> Log? {
+        guard sectionedLogs.indices.contains(indexPath.section) else {
+            return nil
+        }
+        let sectionLogs = sectionedLogs[indexPath.section].logs
+        guard sectionLogs.indices.contains(indexPath.row) else {
+            return nil
+        }
+        return sectionLogs[indexPath.row]
+    }
 }
 
 final class HostingTableViewCell<Content: View>: UITableViewCell {
