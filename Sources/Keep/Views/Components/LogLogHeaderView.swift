@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import SwiftUI
 import Logging
 
@@ -16,7 +17,7 @@ struct LogLogHeaderView: View {
             TitleHeaderView(title: "Log Information")
             VStack {
                 HStack {
-                    Text(log.timestamp.formatted())
+                    Text(log.timestamp.formattedDisplayString())
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -111,6 +112,7 @@ struct LogLogHeaderView: View {
 }
 
 
+@available(iOS 17.0, *)
 #Preview {
     LogLogHeaderView(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
         "url": .string("https://api.example.com"),
@@ -121,3 +123,4 @@ struct LogLogHeaderView: View {
         ])
     ], source: "Somewhere"))
 }
+#endif

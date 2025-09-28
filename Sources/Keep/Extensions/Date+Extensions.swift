@@ -11,7 +11,7 @@ extension Date {
     func ISO8601Format() -> String {
         return Formatter.iso8601.string(from: self)
     }
-    func formatted() -> String {
+    func formattedDisplayString() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy, HH:mm:ss"
         formatter.locale = Locale(identifier: "en_US_POSIX")

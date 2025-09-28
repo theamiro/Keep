@@ -82,12 +82,16 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
         function: String,
         line: UInt
     ) {
+        var combinedMetadata = self.metadata
+        if let metadata {
+            combinedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
+        }
         let log = Log(
             id: UUID().uuidString,
             level: level,
             description: message.description,
             timestamp: Date(),
-            metadata: metadata,
+            metadata: combinedMetadata.isEmpty ? nil : combinedMetadata,
             source: source,
             file: file,
             function: function,

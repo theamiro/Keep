@@ -5,10 +5,9 @@
 //  Created by Michael Amiro on 12/05/2025.
 //
 
-import SwiftUI
 #if canImport(UIKit)
+import SwiftUI
 import UIKit
-#endif
 
 struct ContentUnavailableModel {
     let title: LocalizedStringKey
@@ -52,7 +51,6 @@ struct KeepContentUnavailableView: View {
     KeepContentUnavailableView(model: ContentUnavailableModel(title: "No logs available yet", systemImage: "tray.fill", description: "Continue using the application\nto view logs later."))
 }
 
-#if canImport(UIKit)
 final class ContentUnavailableCell: UITableViewCell {
     private var hostController: UIHostingController<KeepContentUnavailableView>?
     func configure(with model: ContentUnavailableModel, parent: UIViewController) {

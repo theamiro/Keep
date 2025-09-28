@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import SwiftUI
 import Logging
 
@@ -62,6 +63,7 @@ struct LogMetadataView: View {
     }
 }
 
+@available(iOS 17.0, *)
 #Preview {
     LogMetadataView(metadata: [
         "url": .string("https://api.example.com"),
@@ -72,3 +74,4 @@ struct LogMetadataView: View {
         ])
     ])
 }
+#endif

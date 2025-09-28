@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import SwiftUI
 import Logging
 
@@ -54,7 +55,6 @@ struct FilterView: View {
     }
 }
 
-#if canImport(UIKit)
 @available(iOS 17.0, *)
 #Preview {
     @Previewable @State var selectedLevel: Logger.Level? = .debug

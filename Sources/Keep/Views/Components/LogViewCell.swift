@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import SwiftUI
 
 struct LogViewCell: View {
@@ -48,10 +49,10 @@ struct LogViewCell: View {
             }
             Group {
                 if #available(iOS 17.0, macOS 14.0, *) {
-                    Text(log.timestamp.formatted())
+                    Text(log.timestamp.formattedDisplayString())
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(log.timestamp.formatted())
+                    Text(log.timestamp.formattedDisplayString())
                         .foregroundColor(Color.secondary)
                 }
             }
@@ -61,7 +62,7 @@ struct LogViewCell: View {
         .id(log.id)
     }
 }
-
+@available(iOS 17.0, *)
 #Preview("Log View Cell") {
     LogViewCell(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: nil, source: "Somewhere"))
     LogViewCell(log: Log(id: "647474", level: .info, description: "Something crazy went wrong", timestamp: Date(), metadata: [
@@ -74,3 +75,4 @@ struct LogViewCell: View {
     ], source: "Somewhere"))
     LogViewCell(log: Log(id: "847474", level: .trace, description: "LogViewModel deinit", timestamp: Date(), metadata: nil, source: "Somewhere"))
 }
+#endif
