@@ -82,7 +82,7 @@ struct LogLogHeaderView: View {
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Button {
-                                UIPasteboard.general.string = log.description
+                                copyToPasteboard(log.description)
                             } label: {
                                 Text("Copy")
                                     .font(.caption)

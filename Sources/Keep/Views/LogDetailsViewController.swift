@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 final class LogDetailsViewController: UIViewController {
@@ -166,3 +167,4 @@ extension LogDetailsViewController: UICollectionViewDataSource, UICollectionView
         ])
     ], source: "Somewhere")))
 }
+#endif

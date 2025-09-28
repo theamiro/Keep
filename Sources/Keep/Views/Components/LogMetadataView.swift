@@ -16,7 +16,7 @@ struct LogMetadataView: View {
                 TitleHeaderView(title: "Metadata")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button {
-                    UIPasteboard.general.string = metadata.description
+                    copyToPasteboard(metadata.description)
                 } label: {
                     Text("Copy")
                         .font(.caption)

@@ -54,8 +54,10 @@ struct FilterView: View {
     }
 }
 
+#if canImport(UIKit)
 @available(iOS 17.0, *)
 #Preview {
     @Previewable @State var selectedLevel: Logger.Level? = .debug
     FilterView(selectedLevel: $selectedLevel)
 }
+#endif

@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 24/04/2025.
 //
 
+#if canImport(UIKit)
 import Combine
 import SwiftUI
 import UIKit
@@ -303,3 +304,4 @@ final class HostingTableViewCell<Content: View>: UITableViewCell {
         }
     }
 }
+#endif

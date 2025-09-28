@@ -5,6 +5,7 @@
 //  Created by Michael Amiro on 29/04/2025.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 class KeepCoordinator {
@@ -24,3 +25,4 @@ class KeepCoordinator {
         navigationController?.present(viewController, animated: true)
     }
 }
+#endif

@@ -1,22 +1,32 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Foundation
 import Logging
+
+#if canImport(UIKit)
 import SwiftUI
+import UIKit
+#endif
 
 @MainActor
-public class Keep {
+public final class Keep {
     public static private(set) var shared: Keep!
 
+    #if canImport(UIKit)
     private let viewModel: FileLogViewModel
 
     public lazy var viewController: FileLogViewController = {
-        let controller = FileLogViewController(viewModel: self.viewModel)
-        return controller
+        FileLogViewController(viewModel: self.viewModel)
     }()
+    #endif
 
     private init(configuration: KeepConfiguration) {
+        #if canImport(UIKit)
         self.viewModel = FileLogViewModel(configuration: configuration)
+        #else
+        _ = configuration
+        #endif
     }
 
     public static func configure(
@@ -29,12 +39,14 @@ public class Keep {
         shared = Keep(configuration: configuration)
     }
 
+    #if canImport(UIKit)
     public static func logViewController() -> FileLogViewController {
         guard let shared else {
             fatalError("Keep not correctly configured. Call `Keep.configure()` first.")
         }
         return shared.viewController
     }
+    #endif
 }
 
 public final class KeepLogHandler: LogHandler, @unchecked Sendable {
@@ -223,6 +235,7 @@ class FileLoggingSource: LoggingSource {
     }
 }
 
+#if canImport(UIKit)
 class LogMetadataCollectionCell: UICollectionViewCell {
     private var hostController: UIHostingController<LogMetadataView>?
 
@@ -257,7 +270,6 @@ class LogMetadataCollectionCell: UICollectionViewCell {
         }
     }
 }
-
 class LogHeaderCollectionCell: UICollectionViewCell {
     private var hostController: UIHostingController<LogLogHeaderView>?
 
@@ -344,3 +356,4 @@ class TitleHeaderReusableViewCell: UICollectionReusableView {
         }
     }
 }
+#endif

@@ -47,7 +47,7 @@ struct LogViewCell: View {
                     .clipShape(RoundedRectangle(cornerRadius: 4.0))
             }
             Group {
-                if #available(iOS 17.0, *) {
+                if #available(iOS 17.0, macOS 14.0, *) {
                     Text(log.timestamp.formatted())
                         .foregroundStyle(.secondary)
                 } else {
