@@ -207,19 +207,6 @@ class FileLoggingSource: LoggingSource {
     }
 
     func fetch() -> [Log] {
-        if isRunningInPreview {
-            guard let bundledURL = bundledLogResourceURL() else {
-                return []
-            }
-            do {
-                let fileData = try Data(contentsOf: bundledURL)
-                return sortLogs(try JSONDecoder().decode([Log].self, from: fileData))
-            } catch {
-                print(error)
-                return []
-            }
-        }
-
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return []
         }
@@ -266,23 +253,6 @@ class FileLoggingSource: LoggingSource {
 
     private var isRunningInPreview: Bool {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
-    }
-
-    private func bundledLogResourceURL() -> URL? {
-        let name = (fileName as NSString).deletingPathExtension
-        let fileExtension = (fileName as NSString).pathExtension
-
-#if SWIFT_PACKAGE
-        let bundle = Bundle.module
-#else
-        let bundle = Bundle(for: FileLoggingSource.self)
-#endif
-
-        if fileExtension.isEmpty {
-            return bundle.url(forResource: name, withExtension: nil)
-        }
-
-        return bundle.url(forResource: name, withExtension: fileExtension)
     }
 }
 

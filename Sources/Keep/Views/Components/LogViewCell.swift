@@ -21,13 +21,9 @@ struct LogViewCell: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if log.pinned {
-                    HStack(spacing: 4) {
-                        Image(systemName: "pin")
-                            .font(.system(size: 8, weight: .semibold, design: .rounded))
-                        Text("Pinned")
-                            .font(.system(size: 10))
-                            .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    }
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 8)
                 }
             }
             .foregroundColor(Color.secondary)

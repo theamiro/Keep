@@ -14,7 +14,7 @@ public final class FileLogViewController: UIViewController {
     @ObservedObject var viewModel: FileLogViewModel
     private var cancellables = Set<AnyCancellable>()
     private var hostingController: UIHostingController<FilterView>!
-    private var sectionedLogs: [(title: String, logs: [Log])] = []
+    private var sectionedLogs: [LogSection] = []
 
     private lazy var searchController: UISearchController = {
         let controller = UISearchController()
@@ -119,7 +119,7 @@ public final class FileLogViewController: UIViewController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
-                self.sectionedLogs = Self.makeSections(from: self.viewModel.logs)
+                self.sectionedLogs = LogSectionBuilder.makeSections(from: self.viewModel.logs)
                 self.tableView.reloadData()
                 self.title = "Logs (\(self.viewModel.logs.count))"
                 configureClearButton()
@@ -279,6 +279,7 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
                 }
             }
         }
+        bookmarkAction.backgroundColor = .systemBlue
         bookmarkAction.image = UIImage(systemName: imageName)
         let config = UISwipeActionsConfiguration(actions: [bookmarkAction])
         config.performsFirstActionWithFullSwipe = true
@@ -327,31 +328,6 @@ extension FileLogViewController: UISearchResultsUpdating {
 }
 
 private extension FileLogViewController {
-    static func makeSections(from logs: [Log]) -> [(title: String, logs: [Log])] {
-        guard !logs.isEmpty else { return [] }
-        let pinnedLogs = logs.filter { $0.pinned }
-        let unpinnedLogs = logs.filter { !$0.pinned }
-
-        var sections: [(title: String, logs: [Log])] = []
-
-        if !pinnedLogs.isEmpty {
-            sections.append((title: "Pinned", logs: pinnedLogs))
-        }
-
-        let allSectionLogs: [Log]
-        if pinnedLogs.isEmpty {
-            allSectionLogs = logs
-        } else {
-            allSectionLogs = unpinnedLogs
-        }
-
-        if !allSectionLogs.isEmpty {
-            sections.append((title: "All", logs: allSectionLogs))
-        }
-
-        return sections
-    }
-
     func log(for indexPath: IndexPath) -> Log? {
         guard sectionedLogs.indices.contains(indexPath.section) else {
             return nil
