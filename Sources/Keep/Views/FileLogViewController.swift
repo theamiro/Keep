@@ -10,6 +10,7 @@ import Combine
 import SwiftUI
 import UIKit
 
+/// UIKit view controller that displays logs with search, filtering, and pinning support.
 public final class FileLogViewController: UIViewController {
     @ObservedObject var viewModel: FileLogViewModel
     private var cancellables = Set<AnyCancellable>()
@@ -65,6 +66,9 @@ public final class FileLogViewController: UIViewController {
         return tableView
     }()
 
+    /// Creates a log viewer bound to the supplied view model.
+    ///
+    /// - Parameter viewModel: The source responsible for providing and mutating log entries.
     public init(viewModel: FileLogViewModel) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)

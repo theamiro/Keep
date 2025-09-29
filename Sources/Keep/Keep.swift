@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 #endif
 
+/// Primary entry point for configuring Keep and presenting the bundled log viewer.
 @MainActor
 public final class Keep {
     public static private(set) var shared: Keep!
@@ -16,6 +17,7 @@ public final class Keep {
     #if canImport(UIKit)
     private let viewModel: FileLogViewModel
 
+    /// Shared instance of the UIKit log viewer backed by the configured `FileLogViewModel`.
     public lazy var viewController: FileLogViewController = {
         FileLogViewController(viewModel: self.viewModel)
     }()
@@ -29,6 +31,11 @@ public final class Keep {
         #endif
     }
 
+    /// Configures Keep once during application launch.
+    ///
+    /// Call this method before logging any messages or requesting the bundled log viewer.
+    /// Subsequent calls are ignored so it is safe to guard repeated invocations.
+    /// - Parameter configuration: Logging behaviour, including destination and minimum level.
     public static func configure(
         with configuration: KeepConfiguration = KeepConfiguration(
             logHandler: .fileSystem("log.json"), logLevel: .trace)
@@ -40,6 +47,10 @@ public final class Keep {
     }
 
     #if canImport(UIKit)
+    /// Returns the shared log viewer configured through `Keep.configure`.
+    ///
+    /// - Returns: A `FileLogViewController` bound to the shared `FileLogViewModel`.
+    /// - Precondition: `Keep.configure` must be called before requesting the view controller.
     public static func logViewController() -> FileLogViewController {
         guard let shared else {
             fatalError("Keep not correctly configured. Call `Keep.configure()` first.")
@@ -49,7 +60,9 @@ public final class Keep {
     #endif
 }
 
+/// `LogHandler` implementation that forwards messages to the configured `LoggingSource`.
 public final class KeepLogHandler: LogHandler, @unchecked Sendable {
+    /// Access and mutate metadata that should be applied to each log entry.
     public subscript(metadataKey metadataKey: String) -> Logging.Logger.Metadata.Value? {
         get { metadata[metadataKey] }
         set(newValue) { metadata[metadataKey] = newValue }
@@ -57,22 +70,41 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
 
     private var logSource: LoggingSource
 
+    /// Default metadata merged into every logged entry unless overridden at call time.
     public var metadata = Logging.Logger.Metadata()
+    /// Minimum severity that will be recorded by this handler.
     public var logLevel: Logging.Logger.Level
 
     private let configuration: KeepConfiguration
+    private let metadataRedactor: MetadataRedactor
 
+    /// Creates a log handler instance that writes to the destination described by the configuration.
+    ///
+    /// - Parameter configuration: Global logging configuration shared with `Keep`.
     public init(configuration: KeepConfiguration) {
         self.configuration = configuration
+        self.metadataRedactor = MetadataRedactor(isEnabled: configuration.redactsSensitiveInformation)
         self.logLevel = configuration.logLevel
         switch configuration.logHandler {
         case .fileSystem(let fileName):
             logSource = FileLoggingSource(fileName: fileName)
         case .inMemoryCache:
-            logSource = CacheLoggingSource()
+            logSource = InMemoryLoggingSource.shared
         }
     }
 
+    /// Records the supplied message in the active logging destination.
+    ///
+    /// The handler merges metadata supplied through the `LogHandler` protocol with the
+    /// per-call metadata argument, redacting sensitive keys before persisting the entry when configured to do so.
+    /// - Parameters:
+    ///   - level: Severity of the log message.
+    ///   - message: Human readable payload emitted by the caller.
+    ///   - metadata: Optional metadata that should override the handler default values.
+    ///   - source: The subsystem generating the log message.
+    ///   - file: The originating file identifier.
+    ///   - function: The function that produced the log entry.
+    ///   - line: Line number in the originating file.
     public func log(
         level: Logging.Logger.Level,
         message: Logging.Logger.Message,
@@ -86,12 +118,13 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
         if let metadata {
             combinedMetadata.merge(metadata, uniquingKeysWith: { _, new in new })
         }
+        let sanitizedMetadata = metadataRedactor.sanitize(combinedMetadata.isEmpty ? nil : combinedMetadata)
         let log = Log(
             id: UUID().uuidString,
             level: level,
             description: message.description,
             timestamp: Date(),
-            metadata: combinedMetadata.isEmpty ? nil : combinedMetadata,
+            metadata: sanitizedMetadata,
             source: source,
             file: file,
             function: function,
@@ -101,18 +134,34 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
     }
 }
 
+/// Supported backing stores for log persistence.
 public enum LoggingHandler {
+    /// Persists logs to a JSON file inside the application's documents directory.
     case fileSystem(_ fileName: String)
+    /// Keeps logs exclusively in memory for the duration of the process.
     case inMemoryCache
 }
 
+/// Configuration object describing how Keep should capture and present logs.
 public struct KeepConfiguration {
     public let logHandler: LoggingHandler
     public let logLevel: Logging.Logger.Level
+    public let redactsSensitiveInformation: Bool
 
-    public init(logHandler: LoggingHandler, logLevel: Logger.Level = .trace) {
+    /// Creates a new configuration value.
+    ///
+    /// - Parameters:
+    ///   - logHandler: Destination for captured log entries.
+    ///   - logLevel: Minimum level that should be recorded by `KeepLogHandler`.
+    ///   - redactsSensitiveInformation: When `true`, metadata is sanitized before persistence.
+    public init(
+        logHandler: LoggingHandler,
+        logLevel: Logger.Level = .trace,
+        redactsSensitiveInformation: Bool = true
+    ) {
         self.logHandler = logHandler
         self.logLevel = logLevel
+        self.redactsSensitiveInformation = redactsSensitiveInformation
     }
 }
 
@@ -124,11 +173,10 @@ protocol LoggingSource {
     func fetch() -> [Log]
 }
 
-class CacheLoggingSource: LoggingSource {
-    var cache = Cache<String, Log>()
+final class CacheLoggingSource: LoggingSource {
+    private let cache = Cache<String, Log>()
     func store(_ log: Log) {
         cache.insert(log, forKey: log.id)
-        print("Stored in Cache Log \(log.id)")
     }
 
     func update(log: Log) {
@@ -141,15 +189,25 @@ class CacheLoggingSource: LoggingSource {
 
     func flush(completion: () -> Void) {
         cache.removeAll()
+        completion()
     }
 
     func fetch() -> [Log] {
-        return cache.allValues()
+        return sortLogs(cache.allValues())
+    }
+
+    private func sortLogs(_ logs: [Log]) -> [Log] {
+        logs.sorted { lhs, rhs in
+            if lhs.pinned != rhs.pinned {
+                return lhs.pinned && !rhs.pinned
+            }
+            return lhs.timestamp > rhs.timestamp
+        }
     }
 }
 
-class FileLoggingSource: LoggingSource {
-    var fileName: String
+final class FileLoggingSource: LoggingSource {
+    private let fileName: String
     private var fileURL: URL {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         return documentsURL.appendingPathComponent(fileName)
@@ -200,9 +258,9 @@ class FileLoggingSource: LoggingSource {
         do {
             try Data().write(to: fileURL, options: .atomic)
             completion()
-            print("Logs cleared successfully.")
         } catch {
-            print("Failed to clear logs: \(error)")
+            completion()
+            assertionFailure("Failed to clear logs: \(error)")
         }
     }
 
@@ -212,9 +270,10 @@ class FileLoggingSource: LoggingSource {
         }
         do {
             let fileData = try Data(contentsOf: fileURL)
+            guard !fileData.isEmpty else { return [] }
             return sortLogs(try JSONDecoder().decode([Log].self, from: fileData))
         } catch {
-            print(error)
+            assertionFailure("Failed to load logs from disk: \(error)")
             return []
         }
     }
@@ -225,9 +284,10 @@ class FileLoggingSource: LoggingSource {
         }
         do {
             let data = try Data(contentsOf: fileURL)
+            guard !data.isEmpty else { return [] }
             return try JSONDecoder().decode([Log].self, from: data)
         } catch {
-            print("Failed to read or decode logs: \(error)")
+            assertionFailure("Failed to decode existing logs: \(error)")
             return []
         }
     }
@@ -236,9 +296,8 @@ class FileLoggingSource: LoggingSource {
         do {
             let data = try JSONEncoder().encode(logs)
             try data.write(to: fileURL, options: [.atomicWrite])
-            print("Log file updated. \(fileURL.absoluteString)")
         } catch {
-            print("Failed to write updated log file: \(error)")
+            assertionFailure("Failed to persist logs: \(error)")
         }
     }
 

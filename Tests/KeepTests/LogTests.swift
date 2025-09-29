@@ -10,11 +10,16 @@ func logMatchesSearchTerms() async throws {
         "user": "alice",
         "headers": ["Authorization": "Bearer 123", "Content-Type": "application/json"]
     ]
+    let redactor = MetadataRedactor(isEnabled: true)
+    guard let sanitizedMetadata = redactor.sanitize(metadata) else {
+        Issue.record("Expected sanitized metadata")
+        return
+    }
     let log = Log(
         level: .info,
         description: "Login succeeded",
         timestamp: Date(),
-        metadata: metadata,
+        metadata: sanitizedMetadata,
         source: "AuthService",
         file: "AuthService.swift",
         function: "login()",
@@ -36,7 +41,26 @@ func logMetadataSanitizationRedactsSensitiveHeaders() async throws {
             "Content-Type": "application/json"
         ]
     ]
-    let log = Log(level: .debug, description: "Redaction", timestamp: Date(), metadata: metadata)
+    let redactor = MetadataRedactor(isEnabled: true)
+    guard let sanitizedMetadata = redactor.sanitize(metadata) else {
+        Issue.record("Expected sanitized metadata")
+        return
+    }
+    let log = Log(level: .debug, description: "Redaction", timestamp: Date(), metadata: sanitizedMetadata)
+
+    guard let headersValue = log.metadata?["headers"],
+          case let .dictionary(headersDictionary) = headersValue else {
+        Issue.record("Headers metadata should decode to a dictionary")
+        return
+    }
+
+    if case let .string(authorization) = headersDictionary["Authorization"] {
+        #expect(authorization == "[REDACTED]")
+    }
+
+    if case let .string(accessToken) = headersDictionary["access_token"] {
+        #expect(accessToken == "[REDACTED]")
+    }
 
     let data = try JSONEncoder().encode([log])
     let decoded = try JSONDecoder().decode([Log].self, from: data)
@@ -66,25 +90,14 @@ func logMetadataSanitizationRedactsSensitiveHeaders() async throws {
 }
 
 @Test
+@MainActor
 func logTagDetectionMatchesContent() async throws {
     let networkLog = Log(level: .info, description: "GET /users", timestamp: Date(), metadata: ["url": "https://example.com"])
-    if case .network = networkLog.tag {
-        #expect(true)
-    } else {
-        Issue.record("Expected network tag")
-    }
+    #expect(networkLog.tag.title == "HTTP", "Expected network tag")
 
     let memoryLog = Log(level: .debug, description: "Object deinit", timestamp: Date())
-    if case .memory = memoryLog.tag {
-        #expect(true)
-    } else {
-        Issue.record("Expected memory tag")
-    }
+    #expect(memoryLog.tag.title == "Memory", "Expected memory tag")
 
     let unknownLog = Log(level: .error, description: "Unhandled", timestamp: Date())
-    if case .unknown = unknownLog.tag {
-        #expect(true)
-    } else {
-        Issue.record("Expected unknown tag")
-    }
+    #expect(unknownLog.tag.title == "Unknown", "Expected unknown tag")
 }

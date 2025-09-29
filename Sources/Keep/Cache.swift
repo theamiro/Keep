@@ -26,12 +26,10 @@ final class Cache<Key: Hashable, Value> {
         let date = dateProvider().addingTimeInterval(lifetime)
         let entry = Entry(key: key, value: value, expiry: date)
         wrapped.setObject(entry, forKey: WrappedKey(key))
-        print("Inserting value for key: \(key)")
         keyTracker.keys.insert(key)
     }
 
     func value(forKey key: Key) -> Value? {
-        print("Fetching value for key: \(key)")
         guard let entry = wrapped.object(forKey: WrappedKey(key)) else {
             return nil
         }

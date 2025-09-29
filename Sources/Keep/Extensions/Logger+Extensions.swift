@@ -9,6 +9,7 @@ import SwiftUI
 import Logging
 
 extension Logging.Logger.Level {
+    /// Returns a semantic colour associated with the log level for use in the UI.
     public var color: Color {
         switch self {
         case .trace:
@@ -41,6 +42,7 @@ extension Logger.Metadata {
 }
 
 extension Logger.MetadataValue: Codable {
+    /// Encodes the metadata value into a single-value container for persistence.
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
@@ -56,6 +58,7 @@ extension Logger.MetadataValue: Codable {
         }
     }
 
+    /// Decodes a metadata value from a single-value container, matching the shape that was encoded previously.
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
 

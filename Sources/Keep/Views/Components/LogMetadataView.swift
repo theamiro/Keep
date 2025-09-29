@@ -57,7 +57,7 @@ struct LogMetadataView: View {
                 return jsonString
             }
         } catch {
-            print("Error encoding metadata: \(error)")
+            assertionFailure("Failed to encode metadata for display: \(error)")
         }
         return "{}"
     }

@@ -9,6 +9,7 @@ import Foundation
 import Logging
 import Combine
 
+/// View model that powers the UIKit log viewer by sourcing, filtering, and pinning logs.
 @MainActor
 public final class FileLogViewModel: ObservableObject {
     private let loggingSource: LoggingSource
@@ -23,15 +24,17 @@ public final class FileLogViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     static var preview: FileLogViewModel {
-        let sampleLogs = makePreviewLogs()
         let previewSource = CacheLoggingSource()
-        sampleLogs.forEach { previewSource.store($0) }
+        Log.samples.forEach { previewSource.store($0) }
         return FileLogViewModel(
             configuration: .init(logHandler: .inMemoryCache, logLevel: .trace),
             loggingSource: previewSource
         )
     }
 
+    /// Creates a view model that reads from the logging destination described by the configuration.
+    ///
+    /// - Parameter configuration: Determines the logging source and minimum log level.
     public convenience init(configuration: KeepConfiguration) {
         self.init(
             configuration: configuration,
@@ -118,51 +121,7 @@ private extension FileLogViewModel {
         case .fileSystem(let fileName):
             return FileLoggingSource(fileName: fileName)
         case .inMemoryCache:
-            return CacheLoggingSource()
+            return InMemoryLoggingSource.shared
         }
-    }
-
-    static func makePreviewLogs() -> [Log] {
-        let data = generateSampleData(for: "log")
-        if let decoded = try? JSONDecoder().decode([Log].self, from: data), !decoded.isEmpty {
-            var enrichedLogs = decoded
-
-            let criticalIndices = enrichedLogs.enumerated()
-                .filter { _, log in log.level == .critical || log.level == .error }
-                .map { $0.offset }
-                .prefix(3)
-
-            criticalIndices.forEach { index in
-                enrichedLogs[index].pinned = true
-            }
-
-            return enrichedLogs
-        }
-
-        let baseDate = Date()
-        return [
-            Log(
-                level: .error,
-                description: "Failed to decode response payload",
-                timestamp: baseDate.addingTimeInterval(-30),
-                metadata: ["endpoint": "/v1/items"],
-                source: "Networking",
-                pinned: true
-            ),
-            Log(
-                level: .info,
-                description: "Fetched 12 items from /v1/items",
-                timestamp: baseDate.addingTimeInterval(-45),
-                metadata: ["status": "200", "duration": "120ms"],
-                source: "Networking"
-            ),
-            Log(
-                level: .debug,
-                description: "Refreshing cached configuration",
-                timestamp: baseDate.addingTimeInterval(-60),
-                metadata: ["feature": "RemoteConfig"],
-                source: "KeepPreview"
-            )
-        ]
     }
 }
