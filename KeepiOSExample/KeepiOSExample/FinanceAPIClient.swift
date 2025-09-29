@@ -71,7 +71,7 @@ final class FinanceAPIClient {
         logger.notice("Starting mocked transaction fetch", metadata: [
             "url": .string(url.absoluteString),
             "request_id": .string(requestID),
-            "mocked": .string("true"),
+            "mocked": .string("true")
         ])
 
         let start = Date()
@@ -86,7 +86,7 @@ final class FinanceAPIClient {
                 logger.error("Mocked transaction fetch failed", metadata: [
                     "request_id": .string(requestID),
                     "latency_ms": .string(latencyMS),
-                    "error": .string(error.localizedDescription),
+                    "error": .string(error.localizedDescription)
                 ])
                 DispatchQueue.main.async { completion(.failure(error)) }
                 return
@@ -96,7 +96,7 @@ final class FinanceAPIClient {
                 let failure = URLError(.badServerResponse)
                 logger.error("Missing mocked response payload", metadata: [
                     "request_id": .string(requestID),
-                    "latency_ms": .string(latencyMS),
+                    "latency_ms": .string(latencyMS)
                 ])
                 DispatchQueue.main.async { completion(.failure(failure)) }
                 return
@@ -106,7 +106,7 @@ final class FinanceAPIClient {
                 "request_id": .string(requestID),
                 "status": .string(String(httpResponse.statusCode)),
                 "latency_ms": .string(latencyMS),
-                "content_length": .string(String(data.count)),
+                "content_length": .string(String(data.count))
             ])
 
             let previewData = Data(data.prefix(120))
@@ -138,7 +138,7 @@ final class FinanceAPIClient {
                 logger.error("Failed to decode mocked response", metadata: [
                     "request_id": .string(requestID),
                     "latency_ms": .string(latencyMS),
-                    "error": .string(error.localizedDescription),
+                    "error": .string(error.localizedDescription)
                 ])
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
@@ -169,7 +169,7 @@ final class FinanceMockURLProtocol: URLProtocol {
             Transaction(id: 104, merchant: "Fitness App Subscription", amount: -19.99, category: "Health", date: daysAgo(3)),
             Transaction(id: 105, merchant: "Acme Supplies", amount: -122.18, category: "Office", date: daysAgo(4)),
             Transaction(id: 106, merchant: "Evening Bistro", amount: -42.65, category: "Dining", date: daysAgo(5)),
-            Transaction(id: 107, merchant: "Dividend Payout", amount: 24.13, category: "Investments", date: daysAgo(6)),
+            Transaction(id: 107, merchant: "Dividend Payout", amount: 24.13, category: "Investments", date: daysAgo(6))
         ]
     }()
 

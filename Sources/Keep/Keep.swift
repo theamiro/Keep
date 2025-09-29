@@ -343,7 +343,7 @@ class LogMetadataCollectionCell: UICollectionViewCell {
                 controller.view.topAnchor.constraint(equalTo: contentView.topAnchor),
                 controller.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
                 controller.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
             ])
 
             hostController = controller
@@ -371,7 +371,7 @@ class LogHeaderCollectionCell: UICollectionViewCell {
                 controller.view.topAnchor.constraint(equalTo: contentView.topAnchor),
                 controller.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
                 controller.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
             ])
 
             hostController = controller
@@ -400,7 +400,7 @@ class LogCell: UITableViewCell {
                 controller.view.topAnchor.constraint(equalTo: contentView.topAnchor),
                 controller.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
                 controller.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
             ])
 
             hostController = controller
@@ -429,7 +429,7 @@ class TitleHeaderReusableViewCell: UICollectionReusableView {
                 controller.view.topAnchor.constraint(equalTo: topAnchor),
                 controller.view.leadingAnchor.constraint(equalTo: leadingAnchor),
                 controller.view.trailingAnchor.constraint(equalTo: trailingAnchor),
-                controller.view.bottomAnchor.constraint(equalTo: bottomAnchor),
+                controller.view.bottomAnchor.constraint(equalTo: bottomAnchor)
             ])
 
             hostController = controller

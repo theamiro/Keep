@@ -96,7 +96,7 @@ public final class FileLogViewController: UIViewController {
             filterView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             filterView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             filterView.heightAnchor.constraint(equalToConstant: 44),
-            filterView.widthAnchor.constraint(equalTo: view.widthAnchor),
+            filterView.widthAnchor.constraint(equalTo: view.widthAnchor)
         ])
         configureObservers()
     }
@@ -105,7 +105,7 @@ public final class FileLogViewController: UIViewController {
         if viewModel.logs.count < 1 {
             clearButton.removeFromSuperview()
         } else {
-            guard (view.subviews.first(where: { ($0 as? UIButton)?.tag == -1 }) == nil) else {
+            guard view.subviews.first(where: { ($0 as? UIButton)?.tag == -1 }) == nil else {
                 return
             }
             view.addSubview(clearButton)
@@ -132,7 +132,7 @@ public final class FileLogViewController: UIViewController {
 
         viewModel.$selectedLevel
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] level in
+            .sink { [weak self] _ in
                 let filterView = FilterView(selectedLevel: self?.$viewModel.selectedLevel ?? .constant(nil))
                 self?.hostingController.rootView = filterView
                 self?.hostingController.view.setNeedsLayout()

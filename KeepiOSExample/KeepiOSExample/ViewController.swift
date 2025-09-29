@@ -216,7 +216,7 @@ class ViewController: UIViewController {
 
             fetchButton.heightAnchor.constraint(equalToConstant: 48),
             loggingButton.heightAnchor.constraint(equalTo: fetchButton.heightAnchor),
-            viewLogsButton.heightAnchor.constraint(equalTo: fetchButton.heightAnchor),
+            viewLogsButton.heightAnchor.constraint(equalTo: fetchButton.heightAnchor)
         ])
 
         statusLabel.text = "Auto logging will record scheduled finance events."
@@ -265,12 +265,12 @@ class ViewController: UIViewController {
 
                 FinanceLogger.dashboard.notice("Transactions refreshed", metadata: [
                     "count": .string(String(transactions.count)),
-                    "net_change": .string(String(format: "%.2f", transactions.reduce(0) { $0 + $1.amount })),
+                    "net_change": .string(String(format: "%.2f", transactions.reduce(0) { $0 + $1.amount }))
                 ])
             case .failure(let error):
                 self.statusLabel.text = "Failed to refresh: \(error.localizedDescription)"
                 FinanceLogger.dashboard.error("Transaction refresh failed", metadata: [
-                    "error": .string(error.localizedDescription),
+                    "error": .string(error.localizedDescription)
                 ])
             }
         }
@@ -326,7 +326,7 @@ class ViewController: UIViewController {
             "Aggregating card transactions",
             "Updating portfolio performance",
             "Refreshing cash runway projection",
-            "Syncing tax estimations",
+            "Syncing tax estimations"
         ]
 
         guard !events.isEmpty else { return }
@@ -364,7 +364,7 @@ class ViewController: UIViewController {
 
         FinanceLogger.scheduler.notice("\(message)", metadata: [
             "balance_snapshot": .string(balanceString),
-            "sequence": .string(String(autoLogStep)),
+            "sequence": .string(String(autoLogStep))
         ])
 
         statusLabel.text = "Last scheduled log: \(message)."

@@ -9,7 +9,6 @@
 import SwiftUI
 import Logging
 
-
 struct LogLogHeaderView: View {
     var log: Log
     var body: some View {
@@ -110,7 +109,6 @@ struct LogLogHeaderView: View {
         .padding()
     }
 }
-
 
 @available(iOS 17.0, *)
 #Preview {

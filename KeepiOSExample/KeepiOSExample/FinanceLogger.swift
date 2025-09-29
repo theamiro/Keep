@@ -29,4 +29,3 @@ enum FinanceLogger {
         return logger
     }()
 }
-
