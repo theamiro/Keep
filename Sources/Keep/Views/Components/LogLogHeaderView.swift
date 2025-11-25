@@ -11,6 +11,7 @@ import Logging
 
 struct LogLogHeaderView: View {
     var log: Log
+    var pasteCompletion: () -> Void = { }
     var body: some View {
         VStack {
             TitleHeaderView(title: "Log Information")
@@ -82,7 +83,7 @@ struct LogLogHeaderView: View {
                                 .fontWeight(.semibold)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Button {
-                                copyToPasteboard(log.description)
+                                copyToPasteboard(log.description, completion: pasteCompletion)
                             } label: {
                                 Text("Copy")
                                     .font(.caption)

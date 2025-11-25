@@ -353,8 +353,11 @@ class LogMetadataCollectionCell: UICollectionViewCell {
 class LogHeaderCollectionCell: UICollectionViewCell {
     private var hostController: UIHostingController<LogLogHeaderView>?
 
-    func configure(with log: Log, parent: UIViewController) {
-        let headerCell = LogLogHeaderView(log: log)
+    func configure(with log: Log, parent: (UIViewController & ToastPresentable)) {
+        var headerCell = LogLogHeaderView(log: log)
+        headerCell.pasteCompletion = { [weak parent] in
+            parent?.showPopup(message: "Copied to clipboard")
+        }
         if let hostController = hostController {
             hostController.rootView = headerCell
             hostController.view.invalidateIntrinsicContentSize()

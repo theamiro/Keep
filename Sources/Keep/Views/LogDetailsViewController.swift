@@ -8,7 +8,7 @@
 #if canImport(UIKit)
 import UIKit
 
-final class LogDetailsViewController: UIViewController {
+final class LogDetailsViewController: UIViewController, ToastPresentable {
     var log: Log
 
     private lazy var collectionView: UICollectionView = {
