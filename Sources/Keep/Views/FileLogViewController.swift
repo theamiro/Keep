@@ -26,11 +26,17 @@ public final class FileLogViewController: UIViewController {
     private lazy var clearButton: UIButton = {
         let button = UIButton()
         button.tintColor = .systemBlue
+        if #available(iOS 15.0, *) {
+            button.configuration = .borderedProminent()
+        } else {
+            button.backgroundColor = UIColor.systemBlue
+        }
         button.accessibilityLabel = "Clear Logs"
         button.setImage(UIImage(systemName: "trash.fill"), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(presentAlertView), for: .touchUpInside)
-        button.layer.cornerRadius = 28
+        button.layer.cornerRadius = 24
+        button.layer.masksToBounds = true
         button.tag = -1
         return button
     }()
@@ -251,7 +257,7 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
                 LogViewCell(log: log)
             }
         } else {
-            #warning("Resolve sizing issue pre-iOS 16")
+            // TODO: Resolve sizing issue pre-iOS 16
             cell.host(LogViewCell(log: log), parent: self)
         }
         return cell
