@@ -25,7 +25,7 @@ struct MetadataRedactor {
         var sanitized = dict
         for (key, value) in dict {
             let loweredKey = key.lowercased()
-            if Self.sensitiveKeys.contains(loweredKey) {
+            if Self.sensitiveKeys.contains(loweredKey) || Self.sensitiveKeyFragments.contains(where: { loweredKey.contains($0) }) {
                 sanitized[key] = .string("[REDACTED]")
             } else {
                 sanitized[key] = sanitizeValue(value)
@@ -70,5 +70,9 @@ struct MetadataRedactor {
         #"\b\d{16}\b"#,
         #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
         #"Bearer\s+[A-Za-z0-9\-_]+"#
+    ]
+
+    private static let sensitiveKeyFragments: [String] = [
+        "token", "secret", "password", "passphrase", "credential", "auth"
     ]
 }

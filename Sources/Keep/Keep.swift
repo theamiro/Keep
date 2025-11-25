@@ -64,16 +64,30 @@ public final class Keep {
 public final class KeepLogHandler: LogHandler, @unchecked Sendable {
     /// Access and mutate metadata that should be applied to each log entry.
     public subscript(metadataKey metadataKey: String) -> Logging.Logger.Metadata.Value? {
-        get { metadata[metadataKey] }
-        set(newValue) { metadata[metadataKey] = newValue }
+        get { stateQueue.sync { _metadata[metadataKey] } }
+        set(newValue) {
+            stateQueue.sync {
+                _metadata[metadataKey] = newValue
+            }
+        }
     }
 
     private var logSource: LoggingSource
+    private let stateQueue = DispatchQueue(label: "com.keep.logging.handler.state")
 
     /// Default metadata merged into every logged entry unless overridden at call time.
-    public var metadata = Logging.Logger.Metadata()
+    public var metadata: Logging.Logger.Metadata {
+        get { stateQueue.sync { _metadata } }
+        set { stateQueue.sync { _metadata = newValue } }
+    }
     /// Minimum severity that will be recorded by this handler.
-    public var logLevel: Logging.Logger.Level
+    public var logLevel: Logging.Logger.Level {
+        get { stateQueue.sync { _logLevel } }
+        set { stateQueue.sync { _logLevel = newValue } }
+    }
+
+    private var _metadata = Logging.Logger.Metadata()
+    private var _logLevel: Logging.Logger.Level
 
     private let configuration: KeepConfiguration
     private let metadataRedactor: MetadataRedactor
@@ -84,7 +98,7 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
     public init(configuration: KeepConfiguration) {
         self.configuration = configuration
         self.metadataRedactor = MetadataRedactor(isEnabled: configuration.redactsSensitiveInformation)
-        self.logLevel = configuration.logLevel
+        self._logLevel = configuration.logLevel
         switch configuration.logHandler {
         case .fileSystem(let fileName):
             logSource = FileLoggingSource(fileName: fileName)
