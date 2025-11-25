@@ -109,7 +109,12 @@ func logMatchesSearchTermIncludesMetadata() {
 @Test
 @MainActor
 func logTagDetectsNetworkAndMemory() {
-    let networkLog = Log(level: .info, description: "GET /users", timestamp: Date(), metadata: ["url": .string("https://example.com")])
+    let networkLog = Log(
+        level: .info,
+        description: "GET /users",
+        timestamp: Date(),
+        metadata: ["url": .string("https://example.com")]
+    )
     #expect(networkLog.tag is NetworkTag)
 
     let memoryLog = Log(level: .debug, description: "Controller deinit", timestamp: Date())
