@@ -11,13 +11,14 @@ import Logging
 
 struct LogMetadataView: View {
     var metadata: Logger.Metadata
+    var pasteCompletion: () -> Void = { }
     var body: some View {
         VStack {
             HStack {
                 TitleHeaderView(title: "Metadata")
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Button {
-                    copyToPasteboard(metadata.description)
+                    copyToPasteboard(metadata.description, completion: pasteCompletion)
                 } label: {
                     Text("Copy")
                         .font(.caption)

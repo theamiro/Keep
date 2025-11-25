@@ -319,14 +319,17 @@ final class FileLoggingSource: LoggingSource {
 class LogMetadataCollectionCell: UICollectionViewCell {
     private var hostController: UIHostingController<LogMetadataView>?
 
-    func configure(with metadata: Logger.Metadata?, parent: UIViewController) {
+    func configure(with metadata: Logger.Metadata?, parent: ToastPresentable) {
         guard let metadata else {
             hostController?.removeFromParent()
             hostController?.view.removeFromSuperview()
             hostController = nil
             return
         }
-        let metadataCell = LogMetadataView(metadata: metadata)
+        var metadataCell = LogMetadataView(metadata: metadata)
+        metadataCell.pasteCompletion = { [weak parent] in
+            parent?.showPopup(message: "Copied to clipboard")
+        }
         if let hostController = hostController {
             hostController.rootView = metadataCell
             hostController.view.invalidateIntrinsicContentSize()
@@ -350,6 +353,7 @@ class LogMetadataCollectionCell: UICollectionViewCell {
         }
     }
 }
+
 class LogHeaderCollectionCell: UICollectionViewCell {
     private var hostController: UIHostingController<LogLogHeaderView>?
 
