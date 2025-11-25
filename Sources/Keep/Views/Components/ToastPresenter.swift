@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 //
 //  ToastPresenter.swift
 //  Keep
@@ -138,3 +139,4 @@ final class ToastPresenter {
             .first(where: { $0.isKeyWindow })
     }
 }
+#endif
