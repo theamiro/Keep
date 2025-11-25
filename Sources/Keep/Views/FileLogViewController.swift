@@ -281,7 +281,7 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
             Task {
                 await self.viewModel.togglePin(for: log.id)
                 await MainActor.run {
-                    self.showPopup(message: "Log has been \(log.pinned ? "unpinned" : "pinned")!")
+                    self.showPopup(message: "Log has been \(log.pinned ? "pinned" : "unpinned")!")
                     completion(true)
                 }
             }

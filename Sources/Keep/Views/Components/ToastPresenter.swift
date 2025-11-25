@@ -36,7 +36,9 @@ final class ToastPresenter {
         let hosting = UIHostingController(rootView: PopupView(message: message))
         hosting.view.backgroundColor = .clear
 
-        let container = hosting.view!
+        guard let container = hosting.view else {
+            return
+        }
         container.translatesAutoresizingMaskIntoConstraints = false
         container.alpha = 0
         container.transform = CGAffineTransform(translationX: 0, y: 20)
