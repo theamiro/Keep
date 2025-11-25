@@ -25,12 +25,7 @@ public final class FileLogViewController: UIViewController {
 
     private lazy var clearButton: UIButton = {
         let button = UIButton()
-        if #available(iOS 26.0, *) {
-            button.configuration = .prominentGlass()
-            button.tintColor = .systemBlue
-        } else {
-            button.tintColor = .systemBlue
-        }
+        button.tintColor = .systemBlue
         button.accessibilityLabel = "Clear Logs"
         button.setImage(UIImage(systemName: "trash.fill"), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
