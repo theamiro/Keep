@@ -7,7 +7,7 @@ let package = Package(
     name: "Keep",
     platforms: [
         .iOS(.v13),
-        .macOS(.v11)
+        .macOS(.v12)
     ],
     products: [
         .library(

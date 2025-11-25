@@ -245,8 +245,13 @@ func copyToPasteboardWritesStringOnMac() {
     pasteboard.clearContents()
     pasteboard.setString("stale", forType: .string)
 
-    copyToPasteboard("fresh")
+    var completionCalled = false
+
+    copyToPasteboard("fresh", completion: {
+        completionCalled = true
+    })
 
     #expect(pasteboard.string(forType: .string) == "fresh")
+    #expect(completionCalled == true)
 }
 #endif
