@@ -58,10 +58,6 @@ final class LogDetailsViewController: UIViewController {
         view.addSubview(toolbarContainer)
 
         let shareButton = UIButton(type: .system)
-        if #available(iOS 26.0, *) {
-            shareButton.configuration = .prominentGlass()
-            shareButton.configuration?.cornerStyle = .capsule
-        }
         shareButton.setTitle("Share", for: .normal)
         shareButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .bold)
         shareButton.backgroundColor = UIColor.systemBlue

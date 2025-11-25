@@ -347,16 +347,10 @@ final class HostingTableViewCell<Content: View>: UITableViewCell {
         hostingController.view.backgroundColor = .clear
     }
 
-    @MainActor
     private func removeHostingControllerFromParent() {
         hostingController.willMove(toParent: nil)
         hostingController.view.removeFromSuperview()
         hostingController.removeFromParent()
-    }
-
-    @MainActor
-    deinit {
-        removeHostingControllerFromParent()
     }
 
     @available(*, unavailable)
