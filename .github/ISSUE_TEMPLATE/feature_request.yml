@@ -1,0 +1,47 @@
+name: Feature request
+description: Suggest an idea or improvement for Keep
+title: "[Feature]: "
+labels:
+  - enhancement
+  - needs triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping shape Keep. Share the user problem first, then a possible solution.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and pull requests
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the workflow or scenario that is currently difficult.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Outline how you would like Keep to behave. Code samples are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you looked at any workarounds or other tools?
+  - type: textarea
+    id: risks
+    attributes:
+      label: Impact / concerns
+      description: Mention privacy, performance, or API-breaking considerations if relevant.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Links, screenshots, or related issues.
