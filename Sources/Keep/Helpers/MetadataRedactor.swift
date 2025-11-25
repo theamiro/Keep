@@ -25,7 +25,8 @@ struct MetadataRedactor {
         var sanitized = dict
         for (key, value) in dict {
             let loweredKey = key.lowercased()
-            if Self.sensitiveKeys.contains(loweredKey) || Self.sensitiveKeyFragments.contains(where: { loweredKey.contains($0) }) {
+            if Self.sensitiveKeys.contains(loweredKey) ||
+                Self.sensitiveKeyFragments.contains(where: { loweredKey.contains($0) }) {
                 sanitized[key] = .string("[REDACTED]")
             } else {
                 sanitized[key] = sanitizeValue(value)
@@ -50,10 +51,11 @@ struct MetadataRedactor {
     }
 
     private func sanitizeString(_ string: String) -> Logger.MetadataValue {
-        for pattern in Self.redactionPatterns {
-            if string.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
-                return .string("[REDACTED]")
-            }
+        for pattern in Self.redactionPatterns where string.range(
+            of: pattern,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil {
+            return .string("[REDACTED]")
         }
         return .string(string)
     }

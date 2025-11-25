@@ -40,8 +40,13 @@ final class FinanceAPIClient {
         self.decoder = decoder
     }
 
-    func fetchTransactions(limit: Int = 6, completion: @escaping (Result<[Transaction], Error>) -> Void) {
-        guard var components = URLComponents(string: "https://jsonplaceholder.typicode.com/transactions") else {
+    func fetchTransactions(
+        limit: Int = 6,
+        completion: @escaping (Result<[Transaction], Error>) -> Void
+    ) {
+        guard var components = URLComponents(
+            string: "https://jsonplaceholder.typicode.com/transactions"
+        ) else {
             completion(.failure(URLError(.badURL)))
             return
         }
@@ -163,13 +168,55 @@ final class FinanceMockURLProtocol: URLProtocol {
         }
 
         return [
-            Transaction(id: 101, merchant: "GreenLeaf Grocers", amount: -54.27, category: "Groceries", date: daysAgo(1)),
-            Transaction(id: 102, merchant: "Metro Commute", amount: -3.50, category: "Transport", date: daysAgo(1)),
-            Transaction(id: 103, merchant: "Freelance Payment", amount: 650.00, category: "Income", date: daysAgo(2)),
-            Transaction(id: 104, merchant: "Fitness App Subscription", amount: -19.99, category: "Health", date: daysAgo(3)),
-            Transaction(id: 105, merchant: "Acme Supplies", amount: -122.18, category: "Office", date: daysAgo(4)),
-            Transaction(id: 106, merchant: "Evening Bistro", amount: -42.65, category: "Dining", date: daysAgo(5)),
-            Transaction(id: 107, merchant: "Dividend Payout", amount: 24.13, category: "Investments", date: daysAgo(6))
+            Transaction(
+                id: 101,
+                merchant: "GreenLeaf Grocers",
+                amount: -54.27,
+                category: "Groceries",
+                date: daysAgo(1)
+            ),
+            Transaction(
+                id: 102,
+                merchant: "Metro Commute",
+                amount: -3.50,
+                category: "Transport",
+                date: daysAgo(1)
+            ),
+            Transaction(
+                id: 103,
+                merchant: "Freelance Payment",
+                amount: 650.00,
+                category: "Income",
+                date: daysAgo(2)
+            ),
+            Transaction(
+                id: 104,
+                merchant: "Fitness App Subscription",
+                amount: -19.99,
+                category: "Health",
+                date: daysAgo(3)
+            ),
+            Transaction(
+                id: 105,
+                merchant: "Acme Supplies",
+                amount: -122.18,
+                category: "Office",
+                date: daysAgo(4)
+            ),
+            Transaction(
+                id: 106,
+                merchant: "Evening Bistro",
+                amount: -42.65,
+                category: "Dining",
+                date: daysAgo(5)
+            ),
+            Transaction(
+                id: 107,
+                merchant: "Dividend Payout",
+                amount: 24.13,
+                category: "Investments",
+                date: daysAgo(6)
+            )
         ]
     }()
 

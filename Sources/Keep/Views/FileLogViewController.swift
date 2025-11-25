@@ -219,8 +219,14 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         return UITableView.automaticDimension
     }
 
-    private func configureContentUnavailableCell(with tableView: UITableView, indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "contentUnavailableCell", for: indexPath) as? ContentUnavailableCell else {
+    private func configureContentUnavailableCell(
+        with tableView: UITableView,
+        indexPath: IndexPath
+    ) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: "contentUnavailableCell",
+            for: indexPath
+        ) as? ContentUnavailableCell else {
             return UITableViewCell()
         }
         var title: LocalizedStringKey = "No logs available yet"
@@ -235,7 +241,11 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
             title = "No logs matching \"\(viewModel.selectedLevel?.rawValue ?? "Filter")\""
             description = "Try selecting a different log level"
         }
-        let model = ContentUnavailableModel(title: title, systemImage: "tray.fill", description: description)
+        let model = ContentUnavailableModel(
+            title: title,
+            systemImage: "tray.fill",
+            description: description
+        )
         tableView.separatorColor = .clear
         tableView.allowsSelection = false
         cell.configure(with: model, parent: self)
@@ -246,7 +256,10 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         guard let log = log(for: indexPath) else {
             return UITableViewCell()
         }
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "logCell", for: indexPath) as? HostingTableViewCell<LogViewCell> else {
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: "logCell",
+            for: indexPath
+        ) as? HostingTableViewCell<LogViewCell> else {
             let tableViewCell = UITableViewCell()
             tableViewCell.textLabel?.text = log.description
             return tableViewCell
@@ -301,7 +314,10 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
         guard let log = log(for: indexPath) else {
             return nil
         }
-        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [weak self] _, _, completion in
+        let deleteAction = UIContextualAction(
+            style: .destructive,
+            title: "Delete"
+        ) { [weak self] _, _, completion in
             guard let self else {
                 completion(false)
                 return

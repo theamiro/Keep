@@ -9,6 +9,7 @@ import UIKit
 import Keep
 import Logging
 
+// swiftlint:disable:next type_body_length
 class ViewController: UIViewController {
     private enum Constants {
         static let autoLoggingInterval: TimeInterval = 6
@@ -88,7 +89,13 @@ class ViewController: UIViewController {
     }()
 
     private lazy var actionStack: UIStackView = {
-        let stack = UIStackView(arrangedSubviews: [fetchButton, loggingButton, viewLogsButton])
+        let stack = UIStackView(
+            arrangedSubviews: [
+                fetchButton,
+                loggingButton,
+                viewLogsButton
+            ]
+        )
         stack.axis = .vertical
         stack.spacing = 12
         stack.distribution = .fillEqually
@@ -300,10 +307,15 @@ class ViewController: UIViewController {
         guard autoLoggingTimer == nil else { return }
         isLoggingActive = true
         loggingButton.setTitle("Stop Auto Logging", for: .normal)
-        FinanceLogger.scheduler.info("Auto logging enabled", metadata: ["interval": .string("\(Constants.autoLoggingInterval)s")])
+        FinanceLogger.scheduler.info("Auto logging enabled", metadata: [
+            "interval": .string("\(Constants.autoLoggingInterval)s")
+            ]
+        )
         FinanceLogger.scheduler.trace("Preparing scheduler timer")
 
-        autoLoggingTimer = Timer.scheduledTimer(withTimeInterval: Constants.autoLoggingInterval, repeats: true) { [weak self] _ in
+        autoLoggingTimer = Timer.scheduledTimer(
+            withTimeInterval: Constants.autoLoggingInterval,
+            repeats: true) { [weak self] _ in
             self?.emitScheduledLog()
         }
         if let autoLoggingTimer {
@@ -405,7 +417,8 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
         }
 
         let reuseIdentifier = "TransactionCell"
-        let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) ?? UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
+        let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) ??
+        UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
 
         let transaction = transactions[indexPath.row]
         cell.selectionStyle = .none

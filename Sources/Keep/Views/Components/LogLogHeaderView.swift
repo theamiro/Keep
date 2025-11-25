@@ -113,13 +113,21 @@ struct LogLogHeaderView: View {
 
 @available(iOS 17.0, *)
 #Preview {
-    LogLogHeaderView(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
-        "url": .string("https://api.example.com"),
-        "method": .string("GET"),
-        "headers": .dictionary([
-            "Authorization": .string("Bearer ***"),
-            "Content-Type": .string("application/json")
-        ])
-    ], source: "Somewhere"))
+    let log = Log(
+        id: "747474",
+        level: .critical,
+        description: "Something crazy went wrong",
+        timestamp: Date(),
+        metadata: [
+            "url": .string("https://api.example.com"),
+            "method": .string("GET"),
+            "headers": .dictionary([
+                "Authorization": .string("Bearer ***"),
+                "Content-Type": .string("application/json")
+            ])
+        ],
+        source: "Somewhere"
+    )
+    return LogLogHeaderView(log: log)
 }
 #endif

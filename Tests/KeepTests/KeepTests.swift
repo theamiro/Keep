@@ -124,9 +124,23 @@ func fileLogViewModelDeleteRemovesLog() async throws {
 @Test
 func logSectionBuilderPlacesPinnedSectionFirst() {
     let baseDate = Date()
-    let pinnedLog = Log(level: .notice, description: "Pinned", timestamp: baseDate, pinned: true)
-    let anotherPinned = Log(level: .warning, description: "Pinned Too", timestamp: baseDate.addingTimeInterval(-5), pinned: true)
-    let unpinnedLog = Log(level: .debug, description: "Unpinned", timestamp: baseDate.addingTimeInterval(-10))
+    let pinnedLog = Log(
+        level: .notice,
+        description: "Pinned",
+        timestamp: baseDate,
+        pinned: true
+    )
+    let anotherPinned = Log(
+        level: .warning,
+        description: "Pinned Too",
+        timestamp: baseDate.addingTimeInterval(-5),
+        pinned: true
+    )
+    let unpinnedLog = Log(
+        level: .debug,
+        description: "Unpinned",
+        timestamp: baseDate.addingTimeInterval(-10)
+    )
 
     let sections = LogSectionBuilder.makeSections(from: [unpinnedLog, pinnedLog, anotherPinned])
 
