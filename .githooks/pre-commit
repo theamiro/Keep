@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Combined SwiftFormat + SwiftLint pre-commit hook
+# - Formats staged .swift files with SwiftFormat
+# - Runs SwiftLint --fix on those files
+# - Re-adds them to the index
+# - Lints staged files and blocks commit on remaining violations
+
+set -euo pipefail
+
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+RESET=$'\033[0m'
+
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+echo "🔍 Swift pre-commit checks starting..."
+
+# Ensure SwiftFormat is installed
+if ! command_exists swiftformat; then
+  echo "${RED}❌ SwiftFormat is not installed.${RESET}"
+  echo "   Install: https://github.com/nicklockwood/SwiftFormat"
+  exit 1
+fi
+
+# Ensure SwiftLint is installed
+if ! command_exists swiftlint; then
+  echo "${RED}❌ SwiftLint is not installed.${RESET}"
+  echo "   Install: https://github.com/realm/SwiftLint"
+  exit 1
+fi
+
+# Collect staged Swift files
+staged_swift_files=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.swift$' || true)
+
+if [[ -z "$staged_swift_files" ]]; then
+  echo "${YELLOW}ℹ️  No staged Swift files. Skipping SwiftFormat & SwiftLint.${RESET}"
+  exit 0
+fi
+
+# Convert to bash array
+IFS=$'\n' read -r -d '' -a files <<< "$(printf '%s\0' $staged_swift_files)"
+
+echo "🧹 Running SwiftFormat on staged Swift files..."
+swiftformat "${files[@]}"
+
+# Re-add formatted files to the index
+git add "${files[@]}"
+
+echo "🧹 Running SwiftLint --fix on staged Swift files..."
+for file in "${files[@]}"; do
+  # --quiet to only show errors if something goes wrong
+  swiftlint --fix --quiet --path "$file" || true
+done
+
+# Re-add after SwiftLint --fix as well
+git add "${files[@]}"
+
+echo "🔎 Running SwiftLint on staged files..."
+# Note: --use-staged-files requires newer SwiftLint versions.
+if ! swiftlint lint --use-staged-files; then
+  echo "${RED}❌ SwiftLint found violations. Commit aborted.${RESET}"
+  echo "   Please fix the issues above (or let Xcode / SwiftLint help), then re-stage and commit again."
+  exit 1
+fi
+
+echo "${GREEN}✅ SwiftFormat & SwiftLint checks passed. Proceeding with commit.${RESET}"
+exit 0
