@@ -8,20 +8,20 @@
 #if canImport(UIKit)
 import UIKit
 
-class KeepCoordinator {
-    var navigationController: UINavigationController?
+public class KeepCoordinator {
+    public var navigationController: UINavigationController?
 
-    init(navigationController: UINavigationController? = nil) {
+    public init(navigationController: UINavigationController? = nil) {
         self.navigationController = navigationController
     }
 
     @MainActor
-    func push(_ viewController: UIViewController) {
+    public func push(_ viewController: UIViewController) {
         navigationController?.pushViewController(viewController, animated: true)
     }
 
     @MainActor
-    func present(_ viewController: UIViewController) {
+    public func present(_ viewController: UIViewController) {
         navigationController?.present(viewController, animated: true)
     }
 }
