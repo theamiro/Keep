@@ -189,25 +189,37 @@ protocol LoggingSource {
 
 final class CacheLoggingSource: LoggingSource {
     private let cache = Cache<String, Log>()
+    private let stateQueue = DispatchQueue(label: "com.keep.cacheLoggingSource.state")
+
     func store(_ log: Log) {
-        cache.insert(log, forKey: log.id)
+        stateQueue.sync {
+            cache.insert(log, forKey: log.id)
+        }
     }
 
     func update(log: Log) {
-        cache.insert(log, forKey: log.id)
+        stateQueue.sync {
+            cache.insert(log, forKey: log.id)
+        }
     }
 
     func deleteLog(withID id: String) {
-        cache.removeValue(forKey: id)
+        stateQueue.sync {
+            cache.removeValue(forKey: id)
+        }
     }
 
     func flush(completion: () -> Void) {
-        cache.removeAll()
-        completion()
+        stateQueue.sync {
+            cache.removeAll()
+            completion()
+        }
     }
 
     func fetch() -> [Log] {
-        return sortLogs(cache.allValues())
+        stateQueue.sync {
+            sortLogs(cache.allValues())
+        }
     }
 
     private func sortLogs(_ logs: [Log]) -> [Log] {
