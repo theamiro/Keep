@@ -25,7 +25,7 @@ struct MetadataRedactor {
         var sanitized = dict
         for (key, value) in dict {
             let loweredKey = key.lowercased()
-            if Self.sensitiveKeys.contains(loweredKey) || loweredKey.contains("token") {
+            if Self.sensitiveKeys.contains(loweredKey) {
                 sanitized[key] = .string("[REDACTED]")
             } else {
                 sanitized[key] = sanitizeValue(value)

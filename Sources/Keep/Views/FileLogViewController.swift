@@ -154,6 +154,7 @@ public final class FileLogViewController: UIViewController {
 
     private func clearLog() {
         viewModel.clearLogs { [weak self] in
+            self?.showBottomPopup(message: "All logs have been cleared!")
             self?.viewModel.fetchLogs()
         }
     }
@@ -280,6 +281,7 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
             Task {
                 await self.viewModel.togglePin(for: log.id)
                 await MainActor.run {
+                    self.showBottomPopup(message: "Log has been \(log.pinned ? "unpinned" : "pinned")!")
                     completion(true)
                 }
             }
@@ -308,6 +310,7 @@ extension FileLogViewController: UITableViewDelegate, UITableViewDataSource {
                 await self.viewModel.deleteLog(withID: log.id)
                 await MainActor.run {
                     completion(true)
+                    self.showBottomPopup(message: "Log has been deleted!")
                 }
             }
         }
@@ -323,6 +326,40 @@ extension FileLogViewController: UISearchResultsUpdating {
     public func updateSearchResults(for searchController: UISearchController) {
         let searchText = searchController.searchBar.text ?? ""
         viewModel.searchTerm = searchText
+    }
+}
+
+extension FileLogViewController {
+    func showBottomPopup(message: String, duration: TimeInterval = 5.0) {
+        let hosting = UIHostingController(rootView: PopupView(message: message))
+        hosting.view.backgroundColor = .clear
+        addChild(hosting)
+        let container = hosting.view!
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+
+        let bottomConstraint = container.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 120)
+        NSLayoutConstraint.activate([
+            container.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            bottomConstraint
+        ])
+
+        view.layoutIfNeeded()
+
+        bottomConstraint.constant = -32
+        UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.9, initialSpringVelocity: 0.6) {
+            self.view.layoutIfNeeded()
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            bottomConstraint.constant = 120
+            UIView.animate(withDuration: 0.35, animations: {
+                self.view.layoutIfNeeded()
+            }) { _ in
+                hosting.removeFromParent()
+                container.removeFromSuperview()
+            }
+        }
     }
 }
 

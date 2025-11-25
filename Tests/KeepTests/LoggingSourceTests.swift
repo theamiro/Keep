@@ -94,6 +94,82 @@ func inMemoryLoggingSourceSharesStateBetweenHandlerAndViewModel() async throws {
 }
 
 @Test
+@MainActor
+func inMemoryCacheLoggingDoesNotCreateDiskFiles() async throws {
+    let fileManager = FileManager.default
+    let documentsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+    try? fileManager.createDirectory(at: documentsURL, withIntermediateDirectories: true)
+
+    let existingJSONFiles = Set(
+        (try? fileManager.contentsOfDirectory(atPath: documentsURL.path)
+            .filter { $0.hasSuffix(".json") }) ?? []
+    )
+
+    let configuration = KeepConfiguration(logHandler: .inMemoryCache, logLevel: .debug)
+    let handler = KeepLogHandler(configuration: configuration)
+    let source = InMemoryLoggingSource.shared
+    source.flush {}
+
+    handler.log(
+        level: .error,
+        message: Logger.Message("Diskless entry"),
+        metadata: ["scenario": "in-memory"],
+        source: "Tests",
+        file: #fileID,
+        function: #function,
+        line: #line
+    )
+
+    #expect(!source.fetch().isEmpty)
+
+    let jsonFilesAfterLog = Set(
+        (try? fileManager.contentsOfDirectory(atPath: documentsURL.path)
+            .filter { $0.hasSuffix(".json") }) ?? []
+    )
+    let newlyCreatedJSON = jsonFilesAfterLog.subtracting(existingJSONFiles)
+    newlyCreatedJSON.forEach { newFile in
+        try? fileManager.removeItem(at: documentsURL.appendingPathComponent(newFile))
+    }
+
+    #expect(
+        newlyCreatedJSON.isEmpty,
+        "In-memory logging should not create JSON files on disk"
+    )
+
+    source.flush {}
+}
+
+@Test
+@MainActor
+func inMemoryCacheClearsLogsAfterFlush() async throws {
+    let configuration = KeepConfiguration(logHandler: .inMemoryCache, logLevel: .info)
+    let handler = KeepLogHandler(configuration: configuration)
+    let source = InMemoryLoggingSource.shared
+    source.flush {}
+
+    handler.log(
+        level: .debug,
+        message: Logger.Message("Session scoped log"),
+        metadata: nil,
+        source: "Tests",
+        file: #fileID,
+        function: #function,
+        line: #line
+    )
+
+    var viewModel = FileLogViewModel(configuration: configuration)
+    #expect(viewModel.logs.count == 1)
+
+    source.flush {}
+
+    viewModel = FileLogViewModel(configuration: configuration)
+    #expect(
+        viewModel.logs.isEmpty,
+        "Flushing the in-memory cache should simulate closing the app and drop logs"
+    )
+}
+
+@Test
 func cacheLoggingSourceUpdateAndDelete() async throws {
     let source = CacheLoggingSource()
     var log = Log(level: .info, description: "Initial", timestamp: Date())

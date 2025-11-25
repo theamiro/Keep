@@ -42,24 +42,16 @@ struct LogMetadataView: View {
     }
 
     var metadataToJsonString: String {
-        let jsonEncoder = JSONEncoder()
-        jsonEncoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
 
         do {
-            let jsonData = try jsonEncoder.encode(metadata)
-            if let jsonString = String(data: jsonData, encoding: .utf8) {
-                if let data = jsonString.data(using: .utf8),
-                   let jsonObject = try? JSONSerialization.jsonObject(with: data),
-                   let prettyData = try? JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted]),
-                   let prettyString = String(data: prettyData, encoding: .utf8) {
-                    return prettyString
-                }
-                return jsonString
-            }
+            let data = try encoder.encode(metadata)
+            return String(decoding: data, as: UTF8.self)
         } catch {
             assertionFailure("Failed to encode metadata for display: \(error)")
+            return "{}"
         }
-        return "{}"
     }
 }
 
