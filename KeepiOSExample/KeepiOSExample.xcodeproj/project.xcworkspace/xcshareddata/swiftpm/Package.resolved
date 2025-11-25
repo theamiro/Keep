@@ -1,0 +1,24 @@
+{
+  "originHash" : "442db814906ad7d9f2450be2e920ed860421b74d95c4a37eaaa1d36c03afd7bc",
+  "pins" : [
+    {
+      "identity" : "keep",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/theamiro/Keep",
+      "state" : {
+        "branch" : "feature/add-example-and-crud",
+        "revision" : "a94f848f80ce32914561147d860b72cae6f93e48"
+      }
+    },
+    {
+      "identity" : "swift-log",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-log.git",
+      "state" : {
+        "revision" : "ce592ae52f982c847a4efc0dd881cc9eb32d29f2",
+        "version" : "1.6.4"
+      }
+    }
+  ],
+  "version" : 3
+}

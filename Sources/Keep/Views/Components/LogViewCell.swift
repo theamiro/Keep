@@ -19,6 +19,12 @@ struct LogViewCell: View {
                     Text("\(log.file):\(log.line)")
                         .font(.system(size: 10))
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if log.pinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 8)
+                }
             }
             .foregroundColor(Color.secondary)
             HStack(alignment: .top) {
@@ -73,6 +79,6 @@ struct LogViewCell: View {
             "Content-Type": .string("application/json")
         ])
     ], source: "Somewhere"))
-    LogViewCell(log: Log(id: "847474", level: .trace, description: "LogViewModel deinit", timestamp: Date(), metadata: nil, source: "Somewhere"))
+    LogViewCell(log: Log(id: "847474", level: .trace, description: "LogViewModel deinit", timestamp: Date(), metadata: nil, source: "Somewhere", pinned: true))
 }
 #endif

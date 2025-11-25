@@ -41,7 +41,14 @@ func logEncodingRedactsSensitiveMetadata() throws {
             "customToken": .string("secret")
         ])
     ]
-    let log = Log(level: .info, description: "Request finished", timestamp: Date(), metadata: metadata)
+    let redactor = MetadataRedactor(isEnabled: true)
+    let sanitizedMetadata = redactor.sanitize(metadata)
+    let log = Log(
+        level: .info,
+        description: "Request finished",
+        timestamp: Date(),
+        metadata: sanitizedMetadata
+    )
 
     let data = try JSONEncoder().encode(log)
     let decoded = try JSONDecoder().decode(Log.self, from: data)
@@ -55,6 +62,30 @@ func logEncodingRedactsSensitiveMetadata() throws {
     #expect(values["Authorization"] == .string("[REDACTED]"))
     #expect(values["customToken"] == .string("[REDACTED]"))
     #expect(values["Content-Type"] == .string("application/json"))
+}
+
+@Test
+func logEncodingPreservesSensitiveMetadataWhenRedactionDisabled() throws {
+    let metadata: Logger.Metadata = [
+        "Authorization": .string("Bearer 123"),
+        "customToken": .string("secret"),
+        "Content-Type": .string("application/json")
+    ]
+    let redactor = MetadataRedactor(isEnabled: false)
+    let sanitizedMetadata = redactor.sanitize(metadata)
+    let log = Log(
+        level: .info,
+        description: "Request finished",
+        timestamp: Date(),
+        metadata: sanitizedMetadata
+    )
+
+    let data = try JSONEncoder().encode(log)
+    let decoded = try JSONDecoder().decode(Log.self, from: data)
+
+    #expect(decoded.metadata?["Authorization"] == .string("Bearer 123"))
+    #expect(decoded.metadata?["customToken"] == .string("secret"))
+    #expect(decoded.metadata?["Content-Type"] == .string("application/json"))
 }
 
 @Test
@@ -76,15 +107,16 @@ func logMatchesSearchTermIncludesMetadata() {
 }
 
 @Test
+@MainActor
 func logTagDetectsNetworkAndMemory() {
     let networkLog = Log(level: .info, description: "GET /users", timestamp: Date(), metadata: ["url": .string("https://example.com")])
-    #expect(networkLog.tag == .network)
+    #expect(networkLog.tag is NetworkTag)
 
     let memoryLog = Log(level: .debug, description: "Controller deinit", timestamp: Date())
-    #expect(memoryLog.tag == .memory)
+    #expect(memoryLog.tag is MemoryTag)
 
     let unknownLog = Log(level: .error, description: "Unhandled", timestamp: Date(), metadata: nil)
-    #expect(unknownLog.tag == .unknown)
+    #expect(unknownLog.tag is UnknownTag)
 }
 
 @Test
@@ -135,6 +167,40 @@ func keepLogHandlerPersistsLogsToFile() throws {
     #expect(logs.count == 1)
     #expect(logs.first?.metadata?["environment"] == .string("tests"))
     #expect(logs.first?.metadata?["url"] == .string("https://example.com"))
+}
+
+@Test
+func keepLogHandlerHonorsDisabledRedaction() throws {
+    let fileName = "keep-handler-no-redaction-\(UUID()).json"
+    let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+    let fileURL = documentsURL.appendingPathComponent(fileName)
+    defer {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
+    let configuration = KeepConfiguration(
+        logHandler: .fileSystem(fileName),
+        logLevel: .debug,
+        redactsSensitiveInformation: false
+    )
+    let handler = KeepLogHandler(configuration: configuration)
+
+    handler.log(
+        level: .info,
+        message: "Handled request",
+        metadata: ["Authorization": .string("Bearer 123"), "customToken": .string("secret")],
+        source: "tests",
+        file: #fileID,
+        function: #function,
+        line: #line
+    )
+
+    let data = try Data(contentsOf: fileURL)
+    let logs = try JSONDecoder().decode([Log].self, from: data)
+
+    #expect(logs.count == 1)
+    #expect(logs.first?.metadata?["Authorization"] == .string("Bearer 123"))
+    #expect(logs.first?.metadata?["customToken"] == .string("secret"))
 }
 
 @Test

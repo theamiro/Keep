@@ -8,11 +8,13 @@ import UIKit
 import AppKit
 #endif
 
-func copyToPasteboard(_ value: String) {
+func copyToPasteboard(_ value: String, completion: () -> Void) {
 #if canImport(UIKit)
     UIPasteboard.general.string = value
+    completion()
 #elseif canImport(AppKit)
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(value, forType: .string)
+    completion()
 #endif
 }

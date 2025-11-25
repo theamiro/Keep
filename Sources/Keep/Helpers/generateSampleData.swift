@@ -6,16 +6,24 @@
 //
 import Foundation
 
+private final class BundleToken {}
+
 func generateSampleData(for fileName: String, `extension`: String = "json") -> Data {
     var data: Data
-    guard let path = Bundle.module.url(forResource: fileName, withExtension: `extension`) else {
-        return Data()
+    let bundle = Bundle(for: BundleToken.self)
+    guard let path = bundle.url(forResource: fileName, withExtension: `extension`) else {
+        return fallbackSampleData()
     }
-    print(path)
     do {
         data = try Data(contentsOf: path, options: .mappedIfSafe)
         return data
     } catch {
-        return Data()
+        return fallbackSampleData()
     }
+}
+
+private func fallbackSampleData() -> Data {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted]
+    return (try? encoder.encode(Log.samples)) ?? Data()
 }

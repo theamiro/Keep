@@ -26,12 +26,10 @@ final class Cache<Key: Hashable, Value> {
         let date = dateProvider().addingTimeInterval(lifetime)
         let entry = Entry(key: key, value: value, expiry: date)
         wrapped.setObject(entry, forKey: WrappedKey(key))
-        print("Inserting value for key: \(key)")
         keyTracker.keys.insert(key)
     }
 
     func value(forKey key: Key) -> Value? {
-        print("Fetching value for key: \(key)")
         guard let entry = wrapped.object(forKey: WrappedKey(key)) else {
             return nil
         }
@@ -94,14 +92,14 @@ private extension Cache {
         let key: Key
         let value: Value
         let expiry: Date
-        
+
         init(key: Key, value: Value, expiry: Date) {
             self.key = key
             self.value = value
             self.expiry = expiry
         }
     }
-    
+
     final class KeyTracker: NSObject, NSCacheDelegate {
         var keys = Set<Key>()
         func cache(_ cache: NSCache<AnyObject, AnyObject>, willEvictObject obj: Any) {
@@ -109,7 +107,7 @@ private extension Cache {
             keys.remove(entry.key)
         }
     }
-    
+
     func entry(forKey key: Key) -> Entry? {
         guard let entry = wrapped.object(forKey: WrappedKey(key)) else {
             return nil
@@ -120,7 +118,7 @@ private extension Cache {
         }
         return entry
     }
-    
+
     func insert(_ entry: Entry) {
         wrapped.setObject(entry, forKey: WrappedKey(entry.key))
         keyTracker.keys.insert(entry.key)
