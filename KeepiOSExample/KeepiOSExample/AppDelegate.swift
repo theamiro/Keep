@@ -22,7 +22,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Keep.configure(with: configuration)
 
         LoggingSystem.bootstrap { label in
-            var keepHandler = KeepLogHandler(configuration: configuration)
+            let keepHandler = KeepLogHandler(configuration: configuration)
             keepHandler[metadataKey: "logger_label"] = .string(label)
 
             var consoleHandler = StreamLogHandler.standardOutput(label: label)

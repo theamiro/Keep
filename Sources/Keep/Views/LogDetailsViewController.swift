@@ -41,9 +41,19 @@ final class LogDetailsViewController: UIViewController, ToastPresentable {
     private func configureUI() {
         view.backgroundColor = .systemBackground
         view.addSubview(collectionView)
-        collectionView.register(LogHeaderCollectionCell.self, forCellWithReuseIdentifier: "headerCollectionCell")
-        collectionView.register(LogMetadataCollectionCell.self, forCellWithReuseIdentifier: "metadataCollectionCell")
-        collectionView.register(TitleHeaderReusableViewCell.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "titleHeaderReusableCell")
+        collectionView.register(
+            LogHeaderCollectionCell.self,
+            forCellWithReuseIdentifier: "headerCollectionCell"
+        )
+        collectionView.register(
+            LogMetadataCollectionCell.self,
+            forCellWithReuseIdentifier: "metadataCollectionCell"
+        )
+        collectionView.register(
+            TitleHeaderReusableViewCell.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: "titleHeaderReusableCell"
+        )
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -105,7 +115,12 @@ final class LogDetailsViewController: UIViewController, ToastPresentable {
         )
         let section = NSCollectionLayoutSection(group: group)
         section.interGroupSpacing = spacing
-        section.contentInsets = NSDirectionalEdgeInsets(top: spacing, leading: 0, bottom: spacing, trailing: 0)
+        section.contentInsets = NSDirectionalEdgeInsets(
+            top: spacing,
+            leading: 0,
+            bottom: spacing,
+            trailing: 0
+        )
 
         return UICollectionViewCompositionalLayout(section: section)
     }
@@ -119,16 +134,25 @@ extension LogDetailsViewController: UICollectionViewDataSource, UICollectionView
         return 1
     }
 
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+    func collectionView(
+        _ collectionView: UICollectionView,
+        cellForItemAt indexPath: IndexPath
+    ) -> UICollectionViewCell {
         switch getCellType(for: indexPath) {
         case .header:
-            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "headerCollectionCell", for: indexPath) as? LogHeaderCollectionCell else {
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: "headerCollectionCell",
+                for: indexPath
+            ) as? LogHeaderCollectionCell else {
                 return UICollectionViewCell()
             }
             cell.configure(with: log, parent: self)
             return cell
         case .metadata:
-            guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "metadataCollectionCell", for: indexPath) as? LogMetadataCollectionCell else {
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: "metadataCollectionCell",
+                for: indexPath
+            ) as? LogMetadataCollectionCell else {
                 return UICollectionViewCell()
             }
             cell.configure(with: log.metadata, parent: self)
@@ -154,13 +178,21 @@ extension LogDetailsViewController: UICollectionViewDataSource, UICollectionView
 
 @available(iOS 17.0, *)
 #Preview {
-    UINavigationController(rootViewController: LogDetailsViewController(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: [
-        "url": .string("https://api.example.com"),
-        "method": .string("GET"),
-        "headers": .dictionary([
-            "Authorization": .string("Bearer 12345678393933636376373"),
-            "Content-Type": .string("application/json")
-        ])
-    ], source: "Somewhere")))
+    let log = Log(
+        id: "747474",
+        level: .critical,
+        description: "Something crazy went wrong",
+        timestamp: Date(),
+        metadata: [
+            "url": .string("https://api.example.com"),
+            "method": .string("GET"),
+            "headers": .dictionary([
+                "Authorization": .string("Bearer 12345678393933636376373"),
+                "Content-Type": .string("application/json")
+            ])
+        ],
+        source: "Somewhere"
+    )
+    return UINavigationController(rootViewController: LogDetailsViewController(log: log))
 }
 #endif

@@ -92,12 +92,25 @@ func logMetadataSanitizationRedactsSensitiveHeaders() async throws {
 @Test
 @MainActor
 func logTagDetectionMatchesContent() async throws {
-    let networkLog = Log(level: .info, description: "GET /users", timestamp: Date(), metadata: ["url": "https://example.com"])
+    let networkLog = Log(
+        level: .info,
+        description: "GET /users",
+        timestamp: Date(),
+        metadata: ["url": "https://example.com"]
+    )
     #expect(networkLog.tag.title == "HTTP", "Expected network tag")
 
-    let memoryLog = Log(level: .debug, description: "Object deinit", timestamp: Date())
+    let memoryLog = Log(
+        level: .debug,
+        description: "Object deinit",
+        timestamp: Date()
+    )
     #expect(memoryLog.tag.title == "Memory", "Expected memory tag")
 
-    let unknownLog = Log(level: .error, description: "Unhandled", timestamp: Date())
+    let unknownLog = Log(
+        level: .error,
+        description: "Unhandled",
+        timestamp: Date()
+    )
     #expect(unknownLog.tag.title == "Unknown", "Expected unknown tag")
 }

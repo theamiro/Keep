@@ -20,10 +20,8 @@ struct LogTagger {
     }
 
     static func tag(for metadata: Logger.Metadata?, description: String) -> LogTag {
-        for tag in registeredTags {
-            if tag.matches(metadata: metadata, description: description) {
-                return tag
-            }
+        for tag in registeredTags where tag.matches(metadata: metadata, description: description) {
+            return tag
         }
         return UnknownTag()
     }

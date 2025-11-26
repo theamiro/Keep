@@ -70,15 +70,43 @@ struct LogViewCell: View {
 }
 @available(iOS 17.0, *)
 #Preview("Log View Cell") {
-    LogViewCell(log: Log(id: "747474", level: .critical, description: "Something crazy went wrong", timestamp: Date(), metadata: nil, source: "Somewhere"))
-    LogViewCell(log: Log(id: "647474", level: .info, description: "Something crazy went wrong", timestamp: Date(), metadata: [
-        "url": .string("https://api.example.com"),
-        "method": .string("GET"),
-        "headers": .dictionary([
-            "Authorization": .string("Bearer ***"),
-            "Content-Type": .string("application/json")
-        ])
-    ], source: "Somewhere"))
-    LogViewCell(log: Log(id: "847474", level: .trace, description: "LogViewModel deinit", timestamp: Date(), metadata: nil, source: "Somewhere", pinned: true))
+    LogViewCell(
+        log: Log(
+            id: "747474",
+            level: .critical,
+            description: "Something crazy went wrong",
+            timestamp: Date(),
+            metadata: nil,
+            source: "Somewhere"
+        )
+    )
+    LogViewCell(
+        log: Log(
+            id: "647474",
+            level: .info,
+            description: "Something crazy went wrong",
+            timestamp: Date(),
+            metadata: [
+                "url": .string("https://api.example.com"),
+                "method": .string("GET"),
+                "headers": .dictionary([
+                    "Authorization": .string("Bearer ***"),
+                    "Content-Type": .string("application/json")
+                ])
+            ],
+            source: "Somewhere"
+        )
+    )
+    LogViewCell(
+        log: Log(
+            id: "847474",
+            level: .trace,
+            description: "LogViewModel deinit",
+            timestamp: Date(),
+            metadata: nil,
+            source: "Somewhere",
+            pinned: true
+        )
+    )
 }
 #endif

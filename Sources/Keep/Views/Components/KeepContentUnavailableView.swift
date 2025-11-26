@@ -48,33 +48,38 @@ struct KeepContentUnavailableView: View {
 }
 
 #Preview {
-    KeepContentUnavailableView(model: ContentUnavailableModel(title: "No logs available yet", systemImage: "tray.fill", description: "Continue using the application\nto view logs later."))
+    let model = ContentUnavailableModel(
+        title: "No logs available yet",
+        systemImage: "tray.fill",
+        description: "Continue using the application\nto view logs later."
+    )
+    return KeepContentUnavailableView(model: model)
 }
 
 final class ContentUnavailableCell: UITableViewCell {
     private var hostController: UIHostingController<KeepContentUnavailableView>?
     func configure(with model: ContentUnavailableModel, parent: UIViewController) {
-      let view = KeepContentUnavailableView(model: model)
-      if let hostController = hostController {
-        hostController.rootView = view
-        hostController.view.invalidateIntrinsicContentSize()
-      } else {
-        let controller = UIHostingController(rootView: view)
-        controller.view.translatesAutoresizingMaskIntoConstraints = false
-        controller.view.backgroundColor = .clear
+        let view = KeepContentUnavailableView(model: model)
+        if let hostController = hostController {
+            hostController.rootView = view
+            hostController.view.invalidateIntrinsicContentSize()
+        } else {
+            let controller = UIHostingController(rootView: view)
+            controller.view.translatesAutoresizingMaskIntoConstraints = false
+            controller.view.backgroundColor = .clear
 
-        parent.addChild(controller)
-        contentView.addSubview(controller.view)
-        controller.didMove(toParent: parent)
+            parent.addChild(controller)
+            contentView.addSubview(controller.view)
+            controller.didMove(toParent: parent)
 
-        NSLayoutConstraint.activate([
-          controller.view.topAnchor.constraint(equalTo: contentView.topAnchor),
-          controller.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-          controller.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-          controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
-        ])
-        hostController = controller
-      }
+            NSLayoutConstraint.activate([
+                controller.view.topAnchor.constraint(equalTo: contentView.topAnchor),
+                controller.view.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+                controller.view.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                controller.view.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            ])
+            hostController = controller
+        }
     }
 }
 #endif
