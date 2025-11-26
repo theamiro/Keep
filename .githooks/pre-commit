@@ -33,16 +33,20 @@ if ! command_exists swiftlint; then
   exit 1
 fi
 
-# Collect staged Swift files
-staged_swift_files=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.swift$' || true)
+# Collect staged Swift files safely with NUL delimiters
+files=()
+if type mapfile >/dev/null 2>&1; then
+  mapfile -d '' -t files < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.swift')
+else
+  while IFS= read -r -d '' file; do
+    files+=("$file")
+  done < <(git diff --cached --name-only --diff-filter=ACMR -z -- '*.swift')
+fi
 
-if [[ -z "$staged_swift_files" ]]; then
+if [[ ${#files[@]} -eq 0 ]]; then
   echo "${YELLOW}ℹ️  No staged Swift files. Skipping SwiftFormat & SwiftLint.${RESET}"
   exit 0
 fi
-
-# Convert to bash array
-IFS=$'\n' read -r -d '' -a files <<< "$(printf '%s\0' $staged_swift_files)"
 
 echo "🧹 Running SwiftFormat on staged Swift files..."
 swiftformat "${files[@]}"
@@ -60,8 +64,14 @@ done
 git add "${files[@]}"
 
 echo "🔎 Running SwiftLint on staged files..."
-# Note: --use-staged-files requires newer SwiftLint versions.
-if ! swiftlint lint --use-staged-files; then
+lint_failed=0
+for file in "${files[@]}"; do
+  if ! swiftlint lint --path "$file"; then
+    lint_failed=1
+  fi
+done
+
+if ((lint_failed)); then
   echo "${RED}❌ SwiftLint found violations. Commit aborted.${RESET}"
   echo "   Please fix the issues above (or let Xcode / SwiftLint help), then re-stage and commit again."
   exit 1
