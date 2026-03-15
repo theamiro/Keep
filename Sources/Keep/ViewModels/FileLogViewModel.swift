@@ -17,6 +17,8 @@ public final class FileLogViewModel: ObservableObject {
 
     @Published var searchTerm: String = ""
     @Published var selectedLevel: Logging.Logger.Level?
+    /// When set, only logs whose tag title matches are shown.
+    @Published var selectedTag: (any LogTag)?
 
     @Published private(set) var logs: [Log] = []
     private var allLogs: [Log] = []
@@ -63,6 +65,12 @@ public final class FileLogViewModel: ObservableObject {
                 self?.filterLogs()
             }
             .store(in: &cancellables)
+        $selectedTag
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.filterLogs()
+            }
+            .store(in: &cancellables)
     }
 
     func fetchLogs() {
@@ -97,10 +105,12 @@ public final class FileLogViewModel: ObservableObject {
     }
 
     private func filterLogs() {
+        let tagService = configuration.tagService
         let filtered = allLogs.filter { log in
             let matchesSearch = searchTerm.isEmpty || log.matches(searchTerm)
             let matchesLevel = selectedLevel == nil || log.level == selectedLevel
-            return matchesSearch && matchesLevel
+            let matchesTag = selectedTag == nil || log.tag(using: tagService).title == selectedTag?.title
+            return matchesSearch && matchesLevel && matchesTag
         }
         logs = sortLogs(filtered)
     }
@@ -119,7 +129,7 @@ private extension FileLogViewModel {
     static func makeLoggingSource(for configuration: KeepConfiguration) -> LoggingSource {
         switch configuration.logHandler {
         case .fileSystem(let fileName):
-            return FileLoggingSource(fileName: fileName)
+            return FileLoggingSource(fileName: fileName, maxLogCount: configuration.maxLogCount)
         case .inMemoryCache:
             return InMemoryLoggingSource.shared
         }

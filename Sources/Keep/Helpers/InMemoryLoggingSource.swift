@@ -29,8 +29,8 @@ final class InMemoryLoggingSource: LoggingSource, @unchecked Sendable {
     func flush(completion: () -> Void) {
         performBarrier {
             store.removeAll()
+            completion()
         }
-        completion()
     }
 
     func fetch() -> [Log] {

@@ -21,9 +21,17 @@ struct Log: Codable {
     public let line: UInt
     public var pinned: Bool
 
-    @MainActor
-    var tag: LogTag {
-        LogTagger.tag(for: metadata, description: description)
+    /// Returns the tag for this log entry resolved by the supplied service.
+    func tag(using service: LogTagService) -> any LogTag {
+        service.tag(for: metadata, description: description)
+    }
+
+    /// Convenience accessor that resolves the tag using the shared default ``LogTagService``.
+    ///
+    /// This reflects custom tags registered through ``KeepConfiguration/tagService`` after
+    /// ``Keep/configure(with:)`` has been called.
+    var tag: any LogTag {
+        tag(using: LogTagService.default)
     }
 
     /// Creates a log entry value.
@@ -113,6 +121,10 @@ struct Log: Codable {
 }
 
 extension Log {
+    /// Returns `true` when the log entry contains the search term in any of its fields.
+    ///
+    /// Matching is case-insensitive. The timestamp is compared against its human-readable
+    /// display string (dd/MM/yyyy, HH:mm:ss) for predictable search behaviour.
     func matches(_ searchTerm: String) -> Bool {
         let term = searchTerm.lowercased()
 
@@ -123,7 +135,7 @@ extension Log {
             || file.lowercased().contains(term)
             || function.lowercased().contains(term)
             || "\(line)".contains(term)
-            || timestamp.description.lowercased().contains(term)
+            || timestamp.formattedDisplayString().lowercased().contains(term)
             || metadata?.matches(term) ?? false
     }
 }

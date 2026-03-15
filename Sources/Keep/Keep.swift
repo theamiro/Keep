@@ -43,6 +43,7 @@ public final class Keep {
         guard shared == nil else {
             return
         }
+        LogTagService.default = configuration.tagService
         shared = Keep(configuration: configuration)
     }
 
@@ -97,11 +98,16 @@ public final class KeepLogHandler: LogHandler, @unchecked Sendable {
     /// - Parameter configuration: Global logging configuration shared with `Keep`.
     public init(configuration: KeepConfiguration) {
         self.configuration = configuration
-        self.metadataRedactor = MetadataRedactor(isEnabled: configuration.redactsSensitiveInformation)
+        self.metadataRedactor = MetadataRedactor(
+            isEnabled: configuration.redactsSensitiveInformation,
+            additionalSensitiveKeys: configuration.additionalSensitiveKeys,
+            additionalSensitiveKeyFragments: configuration.additionalSensitiveKeyFragments,
+            additionalRedactionPatterns: configuration.additionalRedactionPatterns
+        )
         self._logLevel = configuration.logLevel
         switch configuration.logHandler {
         case .fileSystem(let fileName):
-            logSource = FileLoggingSource(fileName: fileName)
+            logSource = FileLoggingSource(fileName: fileName, maxLogCount: configuration.maxLogCount)
         case .inMemoryCache:
             logSource = InMemoryLoggingSource.shared
         }
@@ -161,6 +167,18 @@ public struct KeepConfiguration {
     public let logHandler: LoggingHandler
     public let logLevel: Logging.Logger.Level
     public let redactsSensitiveInformation: Bool
+    /// Maximum number of log entries retained when using file-backed storage.
+    /// When the limit is reached the oldest entries are evicted. Defaults to `1_000`.
+    public let maxLogCount: Int
+    /// Service used to classify log entries into categories. Register custom tags on
+    /// this service before passing it to `KeepConfiguration`.
+    public let tagService: LogTagService
+    /// Additional metadata keys that should always be redacted, merged with the built-in set.
+    public let additionalSensitiveKeys: Set<String>
+    /// Additional metadata key fragments that trigger redaction, merged with the built-in list.
+    public let additionalSensitiveKeyFragments: [String]
+    /// Additional regex patterns applied to string metadata values for redaction.
+    public let additionalRedactionPatterns: [String]
 
     /// Creates a new configuration value.
     ///
@@ -168,14 +186,29 @@ public struct KeepConfiguration {
     ///   - logHandler: Destination for captured log entries.
     ///   - logLevel: Minimum level that should be recorded by `KeepLogHandler`.
     ///   - redactsSensitiveInformation: When `true`, metadata is sanitized before persistence.
+    ///   - maxLogCount: Maximum entries retained in file-backed storage (default `1_000`).
+    ///   - tagService: Service that classifies logs into tag categories.
+    ///   - additionalSensitiveKeys: Extra metadata keys to redact.
+    ///   - additionalSensitiveKeyFragments: Extra key fragments that trigger redaction.
+    ///   - additionalRedactionPatterns: Extra regex patterns for value redaction.
     public init(
         logHandler: LoggingHandler,
         logLevel: Logger.Level = .trace,
-        redactsSensitiveInformation: Bool = true
+        redactsSensitiveInformation: Bool = true,
+        maxLogCount: Int = 1_000,
+        tagService: LogTagService = LogTagService(),
+        additionalSensitiveKeys: Set<String> = [],
+        additionalSensitiveKeyFragments: [String] = [],
+        additionalRedactionPatterns: [String] = []
     ) {
         self.logHandler = logHandler
         self.logLevel = logLevel
         self.redactsSensitiveInformation = redactsSensitiveInformation
+        self.maxLogCount = maxLogCount
+        self.tagService = tagService
+        self.additionalSensitiveKeys = additionalSensitiveKeys
+        self.additionalSensitiveKeyFragments = additionalSensitiveKeyFragments
+        self.additionalRedactionPatterns = additionalRedactionPatterns
     }
 }
 
@@ -234,13 +267,18 @@ final class CacheLoggingSource: LoggingSource {
 
 final class FileLoggingSource: LoggingSource {
     private let fileName: String
+    private let maxLogCount: Int
     private var fileURL: URL {
         let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         return documentsURL.appendingPathComponent(fileName)
     }
 
-    init(fileName: String) {
+    init(fileName: String, maxLogCount: Int = 1_000) {
+        guard !fileName.contains("/") && !fileName.contains("..") else {
+            fatalError("Keep: invalid log file name '\(fileName)'. File names must not contain '/' or '..'.")
+        }
         self.fileName = fileName
+        self.maxLogCount = maxLogCount
     }
 
     func store(_ log: Log) {
@@ -249,6 +287,11 @@ final class FileLoggingSource: LoggingSource {
         }
         var logs = loadLogs()
         logs.append(log)
+        // Evict oldest entries when the cap is exceeded.
+        if logs.count > maxLogCount {
+            let sorted = logs.sorted { $0.timestamp < $1.timestamp }
+            logs = Array(sorted.suffix(maxLogCount))
+        }
         persist(logs)
     }
 

@@ -8,11 +8,27 @@
 import Logging
 
 /// Sanitizes metadata values by redacting sensitive keys and patterns when enabled.
+///
+/// The built-in sensitive-key set and regex patterns can be extended at configuration
+/// time by supplying additional values through ``KeepConfiguration``.
 struct MetadataRedactor {
     private let isEnabled: Bool
+    private let sensitiveKeys: Set<String>
+    private let sensitiveKeyFragments: [String]
+    private let redactionPatterns: [String]
 
-    init(isEnabled: Bool) {
+    init(
+        isEnabled: Bool,
+        additionalSensitiveKeys: Set<String> = [],
+        additionalSensitiveKeyFragments: [String] = [],
+        additionalRedactionPatterns: [String] = []
+    ) {
         self.isEnabled = isEnabled
+        self.sensitiveKeys = Self.defaultSensitiveKeys.union(
+            additionalSensitiveKeys.map { $0.lowercased() }
+        )
+        self.sensitiveKeyFragments = Self.defaultSensitiveKeyFragments + additionalSensitiveKeyFragments.map { $0.lowercased() }
+        self.redactionPatterns = Self.defaultRedactionPatterns + additionalRedactionPatterns
     }
 
     func sanitize(_ metadata: Logger.Metadata?) -> Logger.Metadata? {
@@ -25,8 +41,8 @@ struct MetadataRedactor {
         var sanitized = dict
         for (key, value) in dict {
             let loweredKey = key.lowercased()
-            if Self.sensitiveKeys.contains(loweredKey) ||
-                Self.sensitiveKeyFragments.contains(where: { loweredKey.contains($0) }) {
+            if sensitiveKeys.contains(loweredKey) ||
+                sensitiveKeyFragments.contains(where: { loweredKey.contains($0) }) {
                 sanitized[key] = .string("[REDACTED]")
             } else {
                 sanitized[key] = sanitizeValue(value)
@@ -51,7 +67,7 @@ struct MetadataRedactor {
     }
 
     private func sanitizeString(_ string: String) -> Logger.MetadataValue {
-        for pattern in Self.redactionPatterns where string.range(
+        for pattern in redactionPatterns where string.range(
             of: pattern,
             options: [.regularExpression, .caseInsensitive]
         ) != nil {
@@ -60,21 +76,21 @@ struct MetadataRedactor {
         return .string(string)
     }
 
-    private static let sensitiveKeys: Set<String> = [
+    private static let defaultSensitiveKeys: Set<String> = [
         "token", "authorization", "apikey", "api_key", "bearer",
         "password", "pass", "secret", "key", "credential", "accesskey", "privatekey",
         "ssn", "socialsecurity", "creditcard", "cardnumber", "iban", "accountnumber",
         "email", "phone", "address"
     ]
 
-    private static let redactionPatterns: [String] = [
+    private static let defaultRedactionPatterns: [String] = [
         #"\b\d{3}-\d{2}-\d{4}\b"#,
         #"\b\d{16}\b"#,
         #"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
         #"Bearer\s+[A-Za-z0-9\-_]+"#
     ]
 
-    private static let sensitiveKeyFragments: [String] = [
+    private static let defaultSensitiveKeyFragments: [String] = [
         "token", "secret", "password", "passphrase", "credential", "auth"
     ]
 }
