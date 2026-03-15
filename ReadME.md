@@ -14,8 +14,9 @@
 
 - **User controlled** – expose logs behind a settings screen or support gesture so users decide when to share diagnostics.
 - **Storage flexibility** – pick an ephemeral in-memory buffer for sensitive builds, or a durable file-backed store when you need persistence.
-- **Productivity** – the supplied `FileLogViewController` groups pinned items, filters by level, and makes it easy to triage issues.
-- **Privacy aware** – metadata is automatically sanitised for common sensitive keys before it ever leaves the device.
+- **Productivity** – the supplied `FileLogViewController` groups pinned items, filters by level and tag, and makes it easy to triage issues.
+- **Privacy aware** – metadata is automatically sanitised before it ever leaves the device, with extensible redaction rules you control.
+- **Extensible tagging** – classify logs as HTTP, Memory, or any custom category by registering your own `LogTag` implementations.
 
 ## Getting Started
 
@@ -52,7 +53,7 @@ func application(_ application: UIApplication,
     let configuration = KeepConfiguration(
         logHandler: .inMemoryCache,   // or .fileSystem("keep-log.json")
         logLevel: .debug,
-        redactsSensitiveInformation: true // set to false to inspect raw metadata
+        redactsSensitiveInformation: true
     )
 
     Keep.configure(with: configuration)
@@ -65,8 +66,8 @@ func application(_ application: UIApplication,
 }
 ```
 
-- Use `.inMemoryCache` when you want logs to disappear on app restart or when you cannot write to disk (for example TestFlight or privacy-sensitive builds).
-- Use `.fileSystem("log.json")` to persist entries under the app’s documents directory. Every call to `LogHandler.log` appends a JSON representation of the entry.
+- Use `.inMemoryCache` when you want logs to disappear on app restart or when you cannot write to disk (e.g. TestFlight or privacy-sensitive builds).
+- Use `.fileSystem("log.json")` to persist entries under the app's documents directory. File names must not contain `/` or `..`.
 
 ### Present the Log Viewer
 
@@ -76,27 +77,72 @@ let navigationController = UINavigationController(rootViewController: logsViewCo
 window.rootViewController?.present(navigationController, animated: true)
 ```
 
-`FileLogViewController` automatically sections pinned logs, supports swipe actions (pin/unpin and delete), and offers search and level filtering.
+`FileLogViewController` automatically sections pinned logs, supports swipe actions (pin/unpin and delete), and offers search, level filtering, and tag filtering.
 
 ### Pinning and Filtering
 
-- Swipe right on any row to pin or unpin it. Pinned entries always appear in the dedicated “Pinned” section.
-- Use the segmented control at the top of the screen to filter by `Logger.Level`.
-- Searching matches fields such as message, metadata values, file/function names, and identifiers.
-
-### SwiftUI Previews
-
-`FileLogViewModel.preview` now feeds the view controller with the in-memory `SampleLogs.preview()` dataset so previews are independent of the bundled `log.json` file used elsewhere.
+- Swipe right on any row to pin or unpin it. Pinned entries always appear in the dedicated "Pinned" section.
+- Filter by `Logger.Level` using the control at the top of the screen.
+- Filter by tag (HTTP, Memory, Unknown, or custom) using the tag filter.
+- Search matches message text, metadata keys and values, source, file/function names, line number, and timestamp.
 
 ## Advanced Topics
 
-### Custom Metadata
+### Log Storage Limits
 
-`KeepLogHandler` merges any metadata you attach through the standard swift-log APIs. Keys containing `token` or `authorization` are automatically redacted when logs are persisted or displayed. Set `KeepConfiguration.redactsSensitiveInformation` to `false` if you need to review unredacted metadata (for example when debugging locally).
+File-backed storage is capped at **1,000 entries** by default. When the limit is reached the oldest entries are evicted automatically. Adjust the cap via `KeepConfiguration`:
+
+```swift
+KeepConfiguration(
+    logHandler: .fileSystem("app.json"),
+    maxLogCount: 500   // keep only the 500 most recent entries
+)
+```
+
+### Custom Metadata Redaction
+
+Keep automatically redacts common sensitive keys (`token`, `authorization`, `password`, `email`, etc.) and patterns (SSNs, credit card numbers, bearer tokens). You can extend this with your own keys and patterns:
+
+```swift
+KeepConfiguration(
+    logHandler: .inMemoryCache,
+    redactsSensitiveInformation: true,
+    additionalSensitiveKeys: ["x-api-key", "session_id"],
+    additionalSensitiveKeyFragments: ["internal_id"],
+    additionalRedactionPatterns: [#"ORDER-\d+"#]
+)
+```
+
+Set `redactsSensitiveInformation: false` only when inspecting raw metadata locally — never in production builds.
+
+### Custom Log Tags
+
+Logs are classified into categories — **HTTP**, **Memory**, or **Unknown** — using `LogTagService`. You can register your own tags to cover additional categories:
+
+```swift
+struct AnalyticsTag: LogTag {
+    var title: String { "Analytics" }
+    func matches(metadata: Logger.Metadata?, description: String) -> Bool {
+        metadata?.matches("analytics") == true || description.lowercased().contains("analytics")
+    }
+}
+
+let tagService = LogTagService()
+tagService.register(AnalyticsTag())
+
+Keep.configure(with: KeepConfiguration(
+    logHandler: .inMemoryCache,
+    tagService: tagService
+))
+```
+
+Custom tags are evaluated before the built-in `UnknownTag` fallback. The first matching tag wins.
+
+The built-in `NetworkTag` matches logs whose metadata contains keys or values referencing `http` or `url`. The built-in `MemoryTag` matches logs whose message contains lifecycle words (`init`, `deinit`, `deallocate`) as whole words — common words like "initialize" or "initialization" are intentionally excluded.
 
 ### Clearing Logs
 
-Call `FileLogViewModel.clearLogs` or use the built-in trash button. For in-memory storage this empties the cache; for file-backed storage the JSON file is reset.
+Call `FileLogViewModel.clearLogs` or use the built-in trash button. For in-memory storage this empties the cache; for file-backed storage the JSON file is reset to empty.
 
 ### Extending the UI
 
