@@ -37,7 +37,7 @@ final class KeepCore: @unchecked Sendable {
         self.configuration = configuration
         sessionStartedAt = startedAt
         distribution = detected
-        isEnabled = configuration.allowedDistributions.contains(detected)
+        isEnabled = detected.mayRunKeep && configuration.allowedDistributions.contains(detected)
         redactor = Redactor(policy: configuration.redaction)
         logs = MemoryBuffer(
             capacity: configuration.memoryCapacity,
@@ -106,6 +106,11 @@ final class KeepCore: @unchecked Sendable {
     /// Synchronous capture for the uncaught-exception handler. Writes the snapshot before returning.
     func recordCrash(name: String, reason: String, callStack: [String]) {
         guard isEnabled else { return }
+        // Let captures that are already queued land first. The wait is bounded, so an exception raised on the
+        // queue itself cannot deadlock the handler.
+        let drained = DispatchSemaphore(value: 0)
+        queue.async { drained.signal() }
+        _ = drained.wait(timeout: .now() + 0.5)
         let entry = makeEntry(
             sequence: nextSequence(), timestamp: Date(), level: .critical, label: "Keep",
             message: "Uncaught exception \(name): \(reason)",

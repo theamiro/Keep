@@ -138,13 +138,42 @@ struct KeepCoreTests {
         #expect(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("crash-snapshot.bin").path))
     }
 
-    @Test func distributionDetectorReadsGetTaskAllow() throws {
+    @Test func profilesAreClassifiedOrFailClosed() throws {
         let directory = try makeTemporaryDirectory()
         let development = directory.appendingPathComponent("dev.mobileprovision")
         try Data("<dict><key>get-task-allow</key>\n\t<true/>\n</dict>".utf8).write(to: development)
         let adHoc = directory.appendingPathComponent("adhoc.mobileprovision")
         try Data("<dict><key>get-task-allow</key>\n\t<false/>\n</dict>".utf8).write(to: adHoc)
-        #expect(LiveDistributionDetector.isDevelopmentProfile(at: development))
-        #expect(!LiveDistributionDetector.isDevelopmentProfile(at: adHoc))
+        let missingKey = directory.appendingPathComponent("nokey.mobileprovision")
+        try Data("<dict><key>name</key><string>x</string></dict>".utf8).write(to: missingKey)
+        let unrecognised = directory.appendingPathComponent("odd.mobileprovision")
+        try Data("<key>get-task-allow</key><string>maybe</string>".utf8).write(to: unrecognised)
+        let unreadable = directory.appendingPathComponent("absent.mobileprovision")
+
+        #expect(LiveDistributionDetector.profileDistribution(at: development) == .development)
+        #expect(LiveDistributionDetector.profileDistribution(at: adHoc) == .adHoc)
+        #expect(LiveDistributionDetector.profileDistribution(at: missingKey) == .unknown)
+        #expect(LiveDistributionDetector.profileDistribution(at: unrecognised) == .unknown)
+        #expect(LiveDistributionDetector.profileDistribution(at: unreadable) == .unknown)
+    }
+
+    @Test func appStoreAndUnknownBuildsNeverRunKeepEvenIfListed() throws {
+        for distribution in [KeepDistribution.appStore, .unknown] {
+            var configuration = makeConfiguration(distribution)
+            configuration.allowedDistributions = Set(KeepDistribution.allCases)
+            let core = try makeCore(configuration, directory: makeTemporaryDirectory())
+            #expect(!core.isEnabled, "\(distribution) must never run Keep")
+        }
+    }
+
+    @Test func crashSnapshotIncludesEntriesQueuedJustBeforeTheException() throws {
+        let directory = try makeTemporaryDirectory()
+        let key = SymmetricKey(size: .bits256)
+        let core = makeCore(directory: directory, key: key)
+        makeLogger(core).error("request failed just before the crash")
+        core.recordCrash(name: "NSInternalInconsistencyException", reason: "boom", callStack: [])
+
+        let snapshot = try #require(SnapshotStore(directory: directory, key: key).loadAndRemove())
+        #expect(snapshot.logs.contains { $0.message == "request failed just before the crash" })
     }
 }

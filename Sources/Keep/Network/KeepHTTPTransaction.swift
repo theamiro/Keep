@@ -31,46 +31,67 @@ public struct KeepHTTPTransaction: Codable, Hashable, Identifiable, Sendable {
         error: Error? = nil
     ) {
         let httpResponse = response as? HTTPURLResponse
-        id = UUID().uuidString
+        self.init(
+            id: UUID().uuidString,
+            label: label,
+            startedAt: startedAt,
+            duration: duration,
+            method: request.httpMethod ?? "GET",
+            url: request.url?.absoluteString ?? "",
+            requestHeaders: request.allHTTPHeaderFields ?? [:],
+            requestBody: (requestBody ?? request.httpBody).map(KeepBody.init),
+            statusCode: httpResponse?.statusCode,
+            responseHeaders: httpResponse.map { Self.headers(from: $0.allHeaderFields) } ?? [:],
+            responseBody: responseBody.map(KeepBody.init),
+            errorDescription: error?.localizedDescription
+        )
+    }
+
+    /// Builds a transaction from parts that are already captured. Used for redacted copies and by the URLSession
+    /// capture, which keeps only the first bytes of a streamed response.
+    init(
+        id: String,
+        label: String,
+        startedAt: Date,
+        duration: TimeInterval,
+        method: String,
+        url: String,
+        requestHeaders: [String: String],
+        requestBody: KeepBody?,
+        statusCode: Int?,
+        responseHeaders: [String: String],
+        responseBody: KeepBody?,
+        errorDescription: String?
+    ) {
+        self.id = id
         self.label = label
         self.startedAt = startedAt
         self.duration = duration
-        method = request.httpMethod ?? "GET"
-        url = request.url?.absoluteString ?? ""
-        requestHeaders = request.allHTTPHeaderFields ?? [:]
-        self.requestBody = (requestBody ?? request.httpBody).map(KeepBody.init)
-        statusCode = httpResponse?.statusCode
-        responseHeaders = httpResponse.map { Self.headers(from: $0.allHeaderFields) } ?? [:]
-        self.responseBody = responseBody.map(KeepBody.init)
-        errorDescription = error?.localizedDescription
-    }
-
-    /// Used by the redactor to build a copy with sensitive parts replaced.
-    init(copying transaction: KeepHTTPTransaction, url: String, requestHeaders: [String: String],
-         requestBody: KeepBody?, responseHeaders: [String: String], responseBody: KeepBody?) {
-        id = transaction.id
-        label = transaction.label
-        startedAt = transaction.startedAt
-        duration = transaction.duration
-        method = transaction.method
+        self.method = method
         self.url = url
         self.requestHeaders = requestHeaders
         self.requestBody = requestBody
-        statusCode = transaction.statusCode
+        self.statusCode = statusCode
         self.responseHeaders = responseHeaders
         self.responseBody = responseBody
-        errorDescription = transaction.errorDescription
+        self.errorDescription = errorDescription
     }
 
-    /// A copy of this transaction with the given redacted parts.
+    /// A copy with every sensitive part redacted, including the error text. Keeps the same identity.
     func redacted(_ redactor: Redactor) -> KeepHTTPTransaction {
         KeepHTTPTransaction(
-            copying: self,
+            id: id,
+            label: label,
+            startedAt: startedAt,
+            duration: duration,
+            method: method,
             url: redactor.redact(url: url),
             requestHeaders: redactor.redact(headers: requestHeaders),
             requestBody: requestBody.map { $0.redacted(redactor) },
+            statusCode: statusCode,
             responseHeaders: redactor.redact(headers: responseHeaders),
-            responseBody: responseBody.map { $0.redacted(redactor) }
+            responseBody: responseBody.map { $0.redacted(redactor) },
+            errorDescription: errorDescription.map { redactor.redact(message: $0) }
         )
     }
 
@@ -111,15 +132,20 @@ public struct KeepBody: Codable, Hashable, Sendable {
     public let isTruncated: Bool
 
     public init(_ data: Data) {
-        byteCount = data.count
-        isTruncated = data.count > KeepHTTPTransaction.maximumBodyBytes
-        let kept = isTruncated ? data.prefix(KeepHTTPTransaction.maximumBodyBytes) : data[...]
+        self.init(prefix: data, totalByteCount: data.count)
+    }
+
+    /// Builds a body from the first bytes of a response. `totalByteCount` is the full size, which can be larger.
+    init(prefix: Data, totalByteCount: Int) {
+        byteCount = totalByteCount
+        isTruncated = totalByteCount > KeepHTTPTransaction.maximumBodyBytes
+        let kept = prefix.prefix(KeepHTTPTransaction.maximumBodyBytes)
         if let text = String(data: kept, encoding: .utf8) {
             self.text = text
         } else if isTruncated {
             text = String(decoding: kept, as: UTF8.self)
         } else {
-            text = "<binary \(data.count) bytes>"
+            text = "<binary \(totalByteCount) bytes>"
         }
     }
 

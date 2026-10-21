@@ -12,7 +12,9 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
     private var forwarder: URLSession?
     private var forwardingTask: URLSessionDataTask?
     private var receivedResponse: URLResponse?
+    /// The first bytes of the response, plus one so the body is still marked as truncated.
     private var receivedBody = Data()
+    private var receivedByteCount = 0
     private var startedAt = Date()
     /// Set when a redirect is handed back to the client, which then issues the new request itself.
     private var redirected = false
@@ -51,8 +53,12 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             },
             onData: { [weak self] data in
-                self?.receivedBody.append(data)
                 guard let self else { return }
+                receivedByteCount += data.count
+                let room = KeepHTTPTransaction.maximumBodyBytes + 1 - receivedBody.count
+                if room > 0 {
+                    receivedBody.append(data.prefix(room))
+                }
                 client?.urlProtocol(self, didLoad: data)
             },
             onComplete: { [weak self] error in
@@ -80,16 +86,21 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     private func recordTransaction(error: Error?) {
-        let transaction = KeepHTTPTransaction(
+        let httpResponse = receivedResponse as? HTTPURLResponse
+        Keep.record(KeepHTTPTransaction(
+            id: UUID().uuidString,
             label: "URLSession",
             startedAt: startedAt,
             duration: Date().timeIntervalSince(startedAt),
-            request: request,
-            response: receivedResponse,
-            responseBody: receivedBody,
-            error: error
-        )
-        Keep.record(transaction)
+            method: request.httpMethod ?? "GET",
+            url: request.url?.absoluteString ?? "",
+            requestHeaders: request.allHTTPHeaderFields ?? [:],
+            requestBody: request.httpBody.map(KeepBody.init),
+            statusCode: httpResponse?.statusCode,
+            responseHeaders: httpResponse.map { KeepHTTPTransaction.headers(from: $0.allHeaderFields) } ?? [:],
+            responseBody: KeepBody(prefix: receivedBody, totalByteCount: receivedByteCount),
+            errorDescription: error?.localizedDescription
+        ))
     }
 }
 

@@ -83,7 +83,7 @@ Keep is protected at four layers. The first two are what keep it out of the bina
 1. **Compile gate.** Add `KEEP_ENABLED` to `SWIFT_ACTIVE_COMPILATION_CONDITIONS` for Development and UAT configurations only. `Diagnostics.swift` compiles to no-ops without it.
 2. **Link exclusion.** For Pilot and Production configurations, set `EXCLUDED_SOURCE_FILE_NAMES = Keep.o`. Keep's code is then not linked into the binary.
 3. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after the link step. Set `KEEP_FORBIDDEN_CONFIGURATIONS` to a semicolon-separated list of configuration names (default `Release`). The build fails if Keep's code or framework is found, and it fails if the executable cannot be read.
-4. **Runtime kill switch.** `Keep.start` detects how the app was distributed. Builds outside `allowedDistributions` (App Store by default) turn Keep off and delete its folder.
+4. **Runtime kill switch.** `Keep.start` detects how the app was distributed. App Store builds, and builds whose provisioning profile cannot be read, turn Keep off and delete its folder, whatever `allowedDistributions` says.
 
 The example app's Release configuration uses layers 2 and 3. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
 
@@ -140,7 +140,7 @@ The note is redacted with the same rules as captured text. The tester picks the 
 
 - **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Killing the app clears them.
 - **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
-- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
+- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text and to the note in a report. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
 
 ### Limits
 

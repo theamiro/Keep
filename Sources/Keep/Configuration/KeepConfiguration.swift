@@ -11,7 +11,8 @@ public struct KeepConfiguration: Sendable {
     public var networkCapacity: Int = 200
     /// Keys whose values are never redacted, and extra sensitive keys or patterns.
     public var redaction = KeepRedactionPolicy()
-    /// Build types that may run Keep. Production (App Store) is never included.
+    /// Build types that may run Keep. App Store builds, and builds whose distribution cannot be determined,
+    /// never run Keep, even when listed here.
     public var allowedDistributions: Set<KeepDistribution> = [.simulator, .development, .adHoc, .testFlight]
     /// Opens the shake menu on device shake.
     public var shakeToOpen: Bool = true
@@ -32,6 +33,15 @@ public enum KeepDistribution: String, Sendable, CaseIterable {
     case adHoc
     case testFlight
     case appStore
+    /// The provisioning profile could not be read or classified. Never runs Keep.
+    case unknown
+}
+
+extension KeepDistribution {
+    /// App Store builds and builds of unknown distribution never run Keep, whatever the configuration says.
+    var mayRunKeep: Bool {
+        self != .appStore && self != .unknown
+    }
 }
 
 protocol KeepDistributionDetecting: Sendable {
@@ -51,7 +61,7 @@ struct LiveDistributionDetector: KeepDistributionDetecting {
             return .simulator
         #else
             if let profileURL = bundle.url(forResource: "embedded", withExtension: "mobileprovision") {
-                return Self.isDevelopmentProfile(at: profileURL) ? .development : .adHoc
+                return Self.profileDistribution(at: profileURL)
             }
             if bundle.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
                 return .testFlight
@@ -60,12 +70,19 @@ struct LiveDistributionDetector: KeepDistributionDetecting {
         #endif
     }
 
-    /// The profile is a CMS envelope whose plist payload is plain XML, so the key can be searched for directly.
-    static func isDevelopmentProfile(at url: URL) -> Bool {
-        guard let data = try? Data(contentsOf: url) else { return false }
+    /// The profile is a CMS envelope whose plist payload is plain XML. Reads the `get-task-allow` value that
+    /// follows the key. Returns `.unknown` when the file cannot be read or the value is missing or unrecognised.
+    static func profileDistribution(at url: URL) -> KeepDistribution {
+        guard let data = try? Data(contentsOf: url) else { return .unknown }
         let key = Data("<key>get-task-allow</key>".utf8)
-        guard let keyRange = data.range(of: key) else { return false }
-        let window = data[keyRange.upperBound ..< min(data.endIndex, keyRange.upperBound + 64)]
-        return window.range(of: Data("<true/>".utf8)) != nil
+        guard let keyRange = data.range(of: key) else { return .unknown }
+        let value = data[keyRange.upperBound...].prefix(64).drop(while: { [0x20, 0x09, 0x0A, 0x0D].contains($0) })
+        if value.starts(with: Data("<true/>".utf8)) {
+            return .development
+        }
+        if value.starts(with: Data("<false/>".utf8)) {
+            return .adHoc
+        }
+        return .unknown
     }
 }

@@ -69,6 +69,31 @@ struct NetworkTransactionTests {
         #expect(stored.errorDescription != nil)
     }
 
+    @Test func errorDescriptionsAreRedactedBeforeTheyAreKept() throws {
+        let core = try makeCore(directory: makeTemporaryDirectory())
+        let request = try URLRequest(url: #require(URL(string: "https://api.example.com/refresh")))
+        let error = NSError(domain: "Refresh", code: 401, userInfo: [
+            NSLocalizedDescriptionKey: "Refresh failed for jane@example.com with token=abc123"
+        ])
+        core.record(KeepHTTPTransaction(
+            label: "URLSession", startedAt: Date(), duration: 0.1, request: request, response: nil, error: error
+        ))
+        core.drainQueue()
+
+        let stored = try #require(core.transactions.snapshot().first)
+        let description = try #require(stored.errorDescription)
+        #expect(!description.contains("jane@example.com"))
+        #expect(!description.contains("abc123"))
+    }
+
+    @Test func streamedBodiesKeepTheirTotalSizeAndOnlyTheFirstBytes() {
+        let prefix = Data(repeating: 0x61, count: KeepHTTPTransaction.maximumBodyBytes + 1)
+        let body = KeepBody(prefix: prefix, totalByteCount: 5_000_000)
+        #expect(body.isTruncated)
+        #expect(body.byteCount == 5_000_000)
+        #expect(body.text.utf8.count == KeepHTTPTransaction.maximumBodyBytes)
+    }
+
     @Test func harOutputFollowsTheHARShape() throws {
         let data = try HAR.data(for: [makeTransaction()], creatorVersion: "0.1.0")
         let root = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
