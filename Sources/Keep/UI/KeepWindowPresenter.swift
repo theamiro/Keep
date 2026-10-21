@@ -14,7 +14,7 @@
 
         func start(shakeEnabled: Bool) {
             if shakeEnabled {
-                ShakeGesture.install { [weak self] in self?.showMenu() }
+                ShakeGesture.install { [weak self] scene in self?.showMenu(in: scene) }
             }
             let center = NotificationCenter.default
             center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
@@ -27,9 +27,10 @@
 
         // MARK: Entry points
 
-        func showMenu() {
+        /// Opens the shake menu in `scene`, or in the foreground scene when no scene is given.
+        func showMenu(in scene: UIWindowScene? = nil) {
             guard !isOpen, Keep.isEnabled else { return }
-            open()
+            open(in: scene)
             let menu = UIAlertController(title: "Keep", message: nil, preferredStyle: .actionSheet)
             if KeepRuntime.shared.current?.previousSnapshot != nil {
                 menu.addAction(UIAlertAction(title: "Share crashed session", style: .default) { [weak self] _ in
@@ -66,7 +67,7 @@
             if isOpen, container.presentedViewController != nil {
                 return
             }
-            open()
+            open(in: nil)
             presentViewer()
         }
 
@@ -92,9 +93,13 @@
             }
         }
 
-        private func open() {
-            if window == nil {
-                window = makeWindow()
+        private func open(in scene: UIWindowScene?) {
+            let target = scene ?? Self.foregroundScene()
+            // A window belongs to one scene. When the shake comes from another scene, move the container there.
+            if window == nil || window?.windowScene !== target {
+                window?.isHidden = true
+                window?.rootViewController = nil
+                window = makeWindow(in: target)
             }
             previousKeyWindow = currentKeyWindow()
             isOpen = true
@@ -123,9 +128,12 @@
             window.makeKeyAndVisible()
         }
 
-        private func makeWindow() -> UIWindow {
+        private static func foregroundScene() -> UIWindowScene? {
             let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-            let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+            return scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        }
+
+        private func makeWindow(in scene: UIWindowScene?) -> UIWindow {
             let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow(frame: UIScreen.main.bounds)
             window.windowLevel = .alert + 1
             window.backgroundColor = .clear

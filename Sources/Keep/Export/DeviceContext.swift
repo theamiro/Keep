@@ -42,7 +42,7 @@ struct DeviceContext: Codable, Sendable {
             physicalMemoryBytes: ProcessInfo.processInfo.physicalMemory,
             isLowPowerModeEnabled: ProcessInfo.processInfo.isLowPowerModeEnabled,
             sessionStartedAt: sessionStartedAt ?? core.sessionStartedAt,
-            userIdentifier: core.currentUserIdentifier
+            userIdentifier: core.reportUserIdentifier
         )
     }
 

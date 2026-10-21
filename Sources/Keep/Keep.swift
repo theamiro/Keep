@@ -52,7 +52,8 @@ public enum Keep {
         KeepRuntime.shared.current?.registerTool(title: title, action: action)
     }
 
-    /// Attaches an identifier (for example a user ID) to the device section of future reports.
+    /// Attaches an identifier (for example a user ID) to the device section of future reports. The value is
+    /// redacted like other report text, so use an opaque identifier.
     public static func setUserIdentifier(_ identifier: String?) {
         KeepRuntime.shared.current?.setUserIdentifier(identifier)
     }

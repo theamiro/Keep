@@ -201,8 +201,9 @@ final class KeepCore: @unchecked Sendable {
         stateLock.locked { userIdentifier = identifier }
     }
 
-    var currentUserIdentifier: String? {
-        stateLock.locked { userIdentifier }
+    /// The identifier the app set, redacted like other report text.
+    var reportUserIdentifier: String? {
+        stateLock.locked { userIdentifier }.map { redactor.redact(message: $0) }
     }
 
     // MARK: Private

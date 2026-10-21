@@ -140,7 +140,7 @@ The note is redacted with the same rules as captured text. The tester picks the 
 
 - **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Killing the app clears them.
 - **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
-- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text and to the note in a report. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
+- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
 
 ### Limits
 

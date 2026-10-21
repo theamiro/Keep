@@ -4,10 +4,11 @@
 
     /// Opens Keep on shake. Swizzles `UIWindow.motionEnded` once; the original implementation still runs.
     enum ShakeGesture {
-        private nonisolated(unsafe) static var handler: (@MainActor () -> Void)?
+        private nonisolated(unsafe) static var handler: (@MainActor (UIWindowScene?) -> Void)?
         private nonisolated(unsafe) static var installed = false
 
-        static func install(_ onShake: @escaping @MainActor () -> Void) {
+        /// `onShake` receives the scene whose window received the shake, so Keep opens in that scene.
+        static func install(_ onShake: @escaping @MainActor (UIWindowScene?) -> Void) {
             handler = onShake
             guard !installed else { return }
             installed = true
@@ -33,9 +34,9 @@
             }
         }
 
-        fileprivate static func shakeDetected() {
+        fileprivate static func shakeDetected(from scene: UIWindowScene?) {
             guard let handler else { return }
-            Task { @MainActor in handler() }
+            Task { @MainActor in handler(scene) }
         }
     }
 
@@ -44,7 +45,7 @@
         @objc func keep_motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
             keep_motionEnded(motion, with: event)
             if motion == .motionShake {
-                ShakeGesture.shakeDetected()
+                ShakeGesture.shakeDetected(from: windowScene)
             }
         }
     }

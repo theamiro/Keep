@@ -37,16 +37,9 @@ if [ ! -f "$executable" ]; then
     exit 1
 fi
 
-# Markers that only appear when Keep's code is linked. Debug builds keep app code in a *.debug.dylib,
-# so every dylib next to the executable is scanned too.
-targets="$executable"
-for dylib in "${TARGET_BUILD_DIR:-}/${EXECUTABLE_FOLDER_PATH:-}"/*.dylib; do
-    if [ -f "$dylib" ]; then
-        targets="$targets $dylib"
-    fi
-done
-
-for target in $targets; do
+# Scans one file for Keep's markers. Each path is passed as a single argument, so spaces are safe.
+scan_file() {
+    target="$1"
     for marker in '_TtC4Keep' '$s4Keep' 'com.keep.core' 'crash-snapshot.bin' 'com.keep.urlprotocol.handled'; do
         # grep exits 0 on a match, 1 on no match, and 2 on error. An error must never count as "no match".
         status=0
@@ -63,6 +56,14 @@ for target in $targets; do
                 ;;
         esac
     done
+}
+
+# Debug builds keep app code in a *.debug.dylib, so every dylib next to the executable is scanned too.
+scan_file "$executable"
+for dylib in "${TARGET_BUILD_DIR:-}/${EXECUTABLE_FOLDER_PATH:-}"/*.dylib; do
+    if [ -f "$dylib" ]; then
+        scan_file "$dylib"
+    fi
 done
 
 for artifact in \

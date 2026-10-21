@@ -45,6 +45,17 @@ printf 'stub' > "$work/debugdylib/App"
 printf 'code com.keep.core' > "$work/debugdylib/App.debug.dylib"
 check "release with Keep in a debug dylib fails" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/debugdylib" EXECUTABLE_PATH=App EXECUTABLE_FOLDER_PATH=
 
+mkdir -p "$work/with space/clean" "$work/with space/dirty"
+printf 'plain executable bytes' > "$work/with space/clean/App"
+printf 'bytes com.keep.core more bytes' > "$work/with space/dirty/App"
+check "build directory with spaces passes when clean" 0 CONFIGURATION=Release TARGET_BUILD_DIR="$work/with space/clean" EXECUTABLE_PATH=App
+check "build directory with spaces still detects Keep" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/with space/dirty" EXECUTABLE_PATH=App
+
+mkdir -p "$work/dylib space/App.app"
+printf 'stub' > "$work/dylib space/App.app/App"
+printf 'code com.keep.core' > "$work/dylib space/App.app/App.debug.dylib"
+check "debug dylib in a path with spaces is scanned" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/dylib space" EXECUTABLE_PATH=App.app/App EXECUTABLE_FOLDER_PATH=App.app
+
 if [ "$failures" -gt 0 ]; then
     echo "$failures check(s) failed"
     exit 1

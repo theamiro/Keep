@@ -34,6 +34,15 @@ struct KeepCoreTests {
         #expect(text.contains("Note: Login failed with token=[REDACTED] for [REDACTED]"))
     }
 
+    @Test func userIdentifiersAreRedactedInReports() throws {
+        let core = try makeCore(directory: makeTemporaryDirectory())
+        core.setUserIdentifier("jane@example.com")
+        #expect(try core.reportInput(for: .currentSession, note: nil).device.userIdentifier == "[REDACTED]")
+
+        core.setUserIdentifier("user-42")
+        #expect(try core.reportInput(for: .currentSession, note: nil).device.userIdentifier == "user-42")
+    }
+
     @Test func minimumLevelDropsLowerEntries() throws {
         var configuration = makeConfiguration()
         configuration.minimumLevel = .warning
