@@ -62,30 +62,7 @@ public enum Keep {
         guard let core = KeepRuntime.shared.current, core.isEnabled else {
             throw KeepError.disabled
         }
-        let input: ReportInput
-        switch scope {
-        case .currentSession:
-            input = ReportInput(
-                title: "Current session",
-                logs: core.logs.snapshot(),
-                transactions: core.transactions.snapshot(),
-                device: DeviceContext.current(core: core),
-                note: note,
-                generatedAt: Date()
-            )
-        case .crashedSession:
-            guard let snapshot = core.previousSnapshot else {
-                throw KeepError.noCrashedSession
-            }
-            input = ReportInput(
-                title: "Crashed session",
-                logs: snapshot.logs,
-                transactions: snapshot.transactions,
-                device: DeviceContext.current(core: core, sessionStartedAt: snapshot.sessionStartedAt),
-                note: note,
-                generatedAt: Date()
-            )
-        }
+        let input = try core.reportInput(for: scope, note: note)
         return try ReportBuilder.archive(input)
     }
 

@@ -19,6 +19,21 @@ struct KeepCoreTests {
         #expect(entry.level == .info)
     }
 
+    @Test func reportNotesAreRedactedBeforeTheyAreWritten() throws {
+        let core = try makeCore(directory: makeTemporaryDirectory())
+        makeLogger(core).info("ready")
+        core.drainQueue()
+
+        let input = try core.reportInput(
+            for: .currentSession,
+            note: "Login failed with token=abc123 for jane@example.com"
+        )
+        let text = ReportBuilder.reportText(input, logs: input.logs, transactions: input.transactions)
+        #expect(!text.contains("abc123"))
+        #expect(!text.contains("jane@example.com"))
+        #expect(text.contains("Note: Login failed with token=[REDACTED] for [REDACTED]"))
+    }
+
     @Test func minimumLevelDropsLowerEntries() throws {
         var configuration = makeConfiguration()
         configuration.minimumLevel = .warning

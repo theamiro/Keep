@@ -129,6 +129,36 @@ final class KeepCore: @unchecked Sendable {
         )
     }
 
+    // MARK: Reports
+
+    /// The contents of a report for `scope`. The note is redacted with the same rules as captured text.
+    func reportInput(for scope: KeepExportScope, note: String?, generatedAt: Date = Date()) throws -> ReportInput {
+        let redactedNote = note.map { redactor.redact(message: $0) }
+        switch scope {
+        case .currentSession:
+            return ReportInput(
+                title: "Current session",
+                logs: logs.snapshot(),
+                transactions: transactions.snapshot(),
+                device: DeviceContext.current(core: self),
+                note: redactedNote,
+                generatedAt: generatedAt
+            )
+        case .crashedSession:
+            guard let snapshot = previousSnapshot else {
+                throw KeepError.noCrashedSession
+            }
+            return ReportInput(
+                title: "Crashed session",
+                logs: snapshot.logs,
+                transactions: snapshot.transactions,
+                device: DeviceContext.current(core: self, sessionStartedAt: snapshot.sessionStartedAt),
+                note: redactedNote,
+                generatedAt: generatedAt
+            )
+        }
+    }
+
     // MARK: Viewer actions
 
     /// Toggles the pin and returns the new state, or nil if the entry is gone.

@@ -16,7 +16,7 @@ Not yet tagged. Until it is, Swift Package Manager users should pin a branch rat
 - Shake menu on any screen, in Keep's own window: *Share report*, *Log viewer*, *Share crashed session* (when there is one), and tools the app registers with `Keep.registerTool`.
 - Distribution gate: `KeepConfiguration.allowedDistributions` (App Store excluded by default) and a runtime kill switch that deletes Keep's folder in other builds.
 - Network transactions: `KeepHTTPTransaction`, `Keep.record`, an opt-in `KeepURLProtocol`, cURL output and HAR 1.2 export.
-- Shareable report: a zip containing `report.txt`, `logs.jsonl`, `network.har` and `device.json`, with an optional note.
+- Shareable report: a zip containing `report.txt`, `logs.jsonl`, `network.har` and `device.json`, with an optional note. The note is redacted like captured text.
 - Encrypted crash snapshot (AES-GCM, Keychain key) written on uncaught Objective-C exceptions and offered on the next launch. MetricKit crash reports are recorded on iOS 14+.
 - `KeepTagRule` for custom tags.
 - `Templates/Diagnostics.swift`, the copy-in file that is the only file importing Keep.

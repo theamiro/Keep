@@ -134,7 +134,7 @@ Shake, then choose *Share report*, or use the Share button in the viewer. Keep a
 - `network.har`: HAR 1.2, which opens in browser dev tools and proxy viewers
 - `device.json`: device and app details
 
-The tester picks the destination in the share sheet. Keep does not send anything itself.
+The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself.
 
 ### What is stored, and what is not
 
