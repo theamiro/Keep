@@ -5,45 +5,38 @@
 //  Created by Michael Amiro on 28/09/2025.
 //
 
-import UIKit
-import Keep
 import Logging
+import UIKit
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
-
-    func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    func application(_: UIApplication, didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         configureLogging()
         return true
     }
 
     private func configureLogging() {
-        let configuration = KeepConfiguration(logHandler: .fileSystem("finance-demo-log.json"), logLevel: .trace)
-        Keep.configure(with: configuration)
+        Diagnostics.start()
 
         LoggingSystem.bootstrap { label in
-            let keepHandler = KeepLogHandler(configuration: configuration)
-            keepHandler[metadataKey: "logger_label"] = .string(label)
-
             var consoleHandler = StreamLogHandler.standardOutput(label: label)
             consoleHandler.logLevel = .info
 
-            return MultiplexLogHandler([keepHandler, consoleHandler])
+            return MultiplexLogHandler([consoleHandler] + Diagnostics.logHandlers(label: label))
         }
     }
 
     // MARK: UISceneSession Lifecycle
 
-    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+    func application(_: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options _: UIScene.ConnectionOptions) -> UISceneConfiguration {
         // Called when a new scene session is being created.
         // Use this method to select a configuration to create the new scene with.
         return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 
-    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+    func application(_: UIApplication, didDiscardSceneSessions _: Set<UISceneSession>) {
         // Called when the user discards a scene session.
         // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
-
 }

@@ -1,34 +1,27 @@
-//
-//  LogTag.swift
-//  Keep
-//
-//  Created by Michael Amiro on 29/09/2025.
-//
+import Foundation
 
-import Logging
+/// Groups log entries under a title. The first matching rule wins; entries that match nothing are "Unknown".
+public struct KeepTagRule: Sendable {
+    public let title: String
+    let matcher: @Sendable (_ message: String, _ metadataKeys: Set<String>) -> Bool
 
-protocol LogTag {
-    var title: String { get }
-    func matches(metadata: Logger.Metadata?, description: String) -> Bool
-}
-
-struct NetworkTag: LogTag {
-    var title: String { "HTTP" }
-    func matches(metadata: Logger.Metadata?, description: String) -> Bool {
-        (metadata?.matches("http") != nil || metadata?.matches("url") != nil)
+    public init(title: String, matches: @escaping @Sendable (_ message: String, _ metadataKeys: Set<String>) -> Bool) {
+        self.title = title
+        matcher = matches
     }
-}
 
-struct MemoryTag: LogTag {
-    var title: String { "Memory" }
-    func matches(metadata: Logger.Metadata?, description: String) -> Bool {
-        description.contains("deinit") || description.contains("deallocate") || description.contains("init")
-    }
-}
+    /// HTTP for curl-style messages and anything carrying `url` / `http.*` metadata; Memory for deinit/dealloc messages.
+    public static let defaults: [KeepTagRule] = [
+        KeepTagRule(title: "HTTP") { message, keys in
+            message.hasPrefix("curl ") || keys.contains("url") || keys.contains { $0.hasPrefix("http.") }
+        },
+        KeepTagRule(title: "Memory") { message, _ in
+            let words = Set(message.lowercased().split { !$0.isLetter }.map(String.init))
+            return !words.isDisjoint(with: ["deinit", "dealloc", "deallocated"])
+        }
+    ]
 
-struct UnknownTag: LogTag {
-    var title: String { "Unknown" }
-    func matches(metadata: Logger.Metadata?, description: String) -> Bool {
-        true
+    static func title(for message: String, metadataKeys: Set<String>, rules: [KeepTagRule]) -> String {
+        rules.first { $0.matcher(message, metadataKeys) }?.title ?? "Unknown"
     }
 }

@@ -5,15 +5,14 @@
 //  Created by Michael Amiro on 28/09/2025.
 //
 
-import UIKit
-import Keep
 import Logging
+import UIKit
 
 // swiftlint:disable:next type_body_length
 class ViewController: UIViewController {
     private enum Constants {
         static let autoLoggingInterval: TimeInterval = 6
-        static let startingBalance: Double = 12_840.42
+        static let startingBalance: Double = 12840.42
     }
 
     private let apiClient = FinanceAPIClient()
@@ -186,7 +185,7 @@ class ViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
 
-        [fetchButton, loggingButton, viewLogsButton].forEach { button in
+        for button in [fetchButton, loggingButton, viewLogsButton] {
             button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
             button.setTitleColor(.label, for: .normal)
         }
@@ -255,7 +254,7 @@ class ViewController: UIViewController {
             self.fetchButton.isEnabled = true
 
             switch result {
-            case .success(let transactions):
+            case let .success(transactions):
                 self.transactions = transactions
                 self.hasLoggedEmptyTableState = transactions.isEmpty
                 self.tableView.reloadData()
@@ -274,7 +273,7 @@ class ViewController: UIViewController {
                     "count": .string(String(transactions.count)),
                     "net_change": .string(String(format: "%.2f", transactions.reduce(0) { $0 + $1.amount }))
                 ])
-            case .failure(let error):
+            case let .failure(error):
                 self.statusLabel.text = "Failed to refresh: \(error.localizedDescription)"
                 FinanceLogger.dashboard.error("Transaction refresh failed", metadata: [
                     "error": .string(error.localizedDescription)
@@ -309,13 +308,13 @@ class ViewController: UIViewController {
         loggingButton.setTitle("Stop Auto Logging", for: .normal)
         FinanceLogger.scheduler.info("Auto logging enabled", metadata: [
             "interval": .string("\(Constants.autoLoggingInterval)s")
-            ]
-        )
+        ])
         FinanceLogger.scheduler.trace("Preparing scheduler timer")
 
         autoLoggingTimer = Timer.scheduledTimer(
             withTimeInterval: Constants.autoLoggingInterval,
-            repeats: true) { [weak self] _ in
+            repeats: true
+        ) { [weak self] _ in
             self?.emitScheduledLog()
         }
         if let autoLoggingTimer {
@@ -384,14 +383,12 @@ class ViewController: UIViewController {
 
     @objc private func openLogsTapped() {
         FinanceLogger.dashboard.trace("Presenting Keep log viewer")
-        let logViewController = Keep.logViewController()
-        let navigationController = UINavigationController(rootViewController: logViewController)
-        present(navigationController, animated: true)
+        Diagnostics.present()
     }
 }
 
 extension ViewController: UITableViewDataSource, UITableViewDelegate {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    func tableView(_: UITableView, numberOfRowsInSection _: Int) -> Int {
         if transactions.isEmpty {
             if !hasLoggedEmptyTableState {
                 hasLoggedEmptyTableState = true
@@ -418,7 +415,7 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
 
         let reuseIdentifier = "TransactionCell"
         let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) ??
-        UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
+            UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
 
         let transaction = transactions[indexPath.row]
         cell.selectionStyle = .none
