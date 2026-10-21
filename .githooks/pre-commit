@@ -57,7 +57,7 @@ git add "${files[@]}"
 echo "🧹 Running SwiftLint --fix on staged Swift files..."
 for file in "${files[@]}"; do
   # --quiet to only show errors if something goes wrong
-  swiftlint --fix --quiet --path "$file" || true
+  swiftlint --fix --quiet "$file" || true
 done
 
 # Re-add after SwiftLint --fix as well
@@ -66,7 +66,7 @@ git add "${files[@]}"
 echo "🔎 Running SwiftLint on staged files..."
 lint_failed=0
 for file in "${files[@]}"; do
-  if ! swiftlint lint --path "$file"; then
+  if ! swiftlint lint "$file"; then
     lint_failed=1
   fi
 done

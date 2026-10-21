@@ -1,15 +1,6 @@
 {
-  "originHash" : "442db814906ad7d9f2450be2e920ed860421b74d95c4a37eaaa1d36c03afd7bc",
+  "originHash" : "3335096666ea889b5380d000d9e232f58603d634e2eaf66f9b5701ef8708c13f",
   "pins" : [
-    {
-      "identity" : "keep",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/theamiro/Keep",
-      "state" : {
-        "branch" : "feature/add-example-and-crud",
-        "revision" : "a94f848f80ce32914561147d860b72cae6f93e48"
-      }
-    },
     {
       "identity" : "swift-log",
       "kind" : "remoteSourceControl",

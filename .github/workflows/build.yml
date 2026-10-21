@@ -14,3 +14,12 @@ jobs:
               run: swift build -v
             - name: Run Tests
               run: swift test
+            - name: Build UIKit sources for iOS Simulator
+              run: xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build
+            - name: Test verification script
+              run: sh Scripts/keep-verify-excluded.test.sh
+            - name: Build example Release and verify Keep is excluded
+              run: >
+                xcodebuild -project KeepiOSExample/KeepiOSExample.xcodeproj -scheme KeepiOSExample
+                -configuration Release -destination 'generic/platform=iOS Simulator'
+                CODE_SIGNING_ALLOWED=NO build

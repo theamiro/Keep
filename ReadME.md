@@ -1,4 +1,4 @@
-# Keep – Privacy-Aware Log Viewer for Swift
+# Keep – In-App Diagnostics for Internal iOS Builds
 
 <p align="left">
 <img src="https://github.com/theamiro/Keep/actions/workflows/build.yml/badge.svg" />
@@ -8,25 +8,28 @@
 </a>
 </p>
 
-**Keep** is a lightweight companion for apps that want to expose runtime logs to their users, customer-support agents, or QA teams without compromising privacy. It plugs into [swift-log](https://github.com/apple/swift-log), stores entries in memory or on disk, and ships with a UIKit log browser that can be embedded in any app or shared via a debug build.
+**Keep** is a Chucker-style diagnostics tool for iOS. Testers open it with a shake, see what the app logged and which network requests it made, and share a report through the system share sheet. It captures [swift-log](https://github.com/apple/swift-log) messages and HTTP transactions in memory, redacts sensitive values before they are stored, and is compiled out of production builds.
 
 ## Why Keep?
 
-- **User controlled** – expose logs behind a settings screen or support gesture so users decide when to share diagnostics.
-- **Storage flexibility** – pick an ephemeral in-memory buffer for sensitive builds, or a durable file-backed store when you need persistence.
-- **Productivity** – the supplied `FileLogViewController` groups pinned items, filters by level, and makes it easy to triage issues.
-- **Privacy aware** – metadata is automatically sanitised for common sensitive keys before it ever leaves the device.
+- **Opens from anywhere.** A shake opens the menu on any screen, including the splash screen, the login screen and over a certificate-failure alert. It runs in its own window, so it does not depend on your navigation.
+- **Memory only.** Sessions live in memory. The only thing written to disk is an encrypted crash snapshot, which is removed on the next launch.
+- **Redacted by default.** Bearer tokens, JWTs, passwords, emails, phone numbers, SSNs and Luhn-valid card numbers are removed before they are stored. Redaction cannot be turned off.
+- **Never in production.** Keep is linked only into internal builds. A build check fails if Keep's code ever reaches a production binary. A runtime check turns Keep off in App Store builds as a backstop.
 
 ## Getting Started
 
 ### Installation (Swift Package Manager)
 
-Add Keep to your package manifest:
+Add Keep to your package manifest (pinning the dependency to the `main` branch to follow the most recent changes):
 
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/theamiro/Keep.git", branch: "main")
+    .package(
+        url: "https://github.com/theamiro/Keep.git",
+        branch: "main"
+    )
 ]
 ```
 
@@ -41,66 +44,109 @@ Then include `Keep` in the target that requires logging support:
 
 In Xcode you can also choose **File ▸ Add Packages…** and paste the repository URL.
 
-### Configure Keep at Launch
+### Start Keep
+
+Create a `Diagnostics.swift` in your app target from [`Templates/Diagnostics.swift`](Templates/Diagnostics.swift). It is the only file that imports Keep. Then start Keep first thing in `application(_:didFinishLaunchingWithOptions:)`, and add its log handler to your swift-log bootstrap:
 
 ```swift
-import Keep
-import Logging
-
 func application(_ application: UIApplication,
                  didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    let configuration = KeepConfiguration(
-        logHandler: .inMemoryCache,   // or .fileSystem("keep-log.json")
-        logLevel: .debug,
-        redactsSensitiveInformation: true // set to false to inspect raw metadata
-    )
+    Diagnostics.start()
 
-    Keep.configure(with: configuration)
-
-    LoggingSystem.bootstrap { _ in
-        KeepLogHandler(configuration: configuration)
+    LoggingSystem.bootstrap { label in
+        var consoleHandler = StreamLogHandler.standardOutput(label: label)
+        consoleHandler.logLevel = .info
+        return MultiplexLogHandler([consoleHandler] + Diagnostics.logHandlers(label: label))
     }
-
     return true
 }
 ```
 
-- Use `.inMemoryCache` when you want logs to disappear on app restart or when you cannot write to disk (for example TestFlight or privacy-sensitive builds).
-- Use `.fileSystem("log.json")` to persist entries under the app’s documents directory. Every call to `LogHandler.log` appends a JSON representation of the entry.
-
-### Present the Log Viewer
+Inside `Diagnostics.start()`, Keep is configured with `KeepConfiguration`. The defaults are the ones you usually want:
 
 ```swift
-let logsViewController = Keep.logViewController()
-let navigationController = UINavigationController(rootViewController: logsViewController)
-window.rootViewController?.present(navigationController, animated: true)
+var configuration = KeepConfiguration()
+configuration.minimumLevel = .debug            // drop anything below debug
+configuration.memoryCapacity = 2_000           // log entries kept in memory
+configuration.shakeToOpen = true               // shake opens the menu
+configuration.redaction.allowedKeys = ["page"] // keys that must never be redacted
+configuration.redaction.extraKeys = ["customerRef"]
+Keep.start(configuration)
 ```
 
-`FileLogViewController` automatically sections pinned logs, supports swipe actions (pin/unpin and delete), and offers search and level filtering.
+`Keep.start` is idempotent, so calling it again is harmless.
 
-### Pinning and Filtering
+### Keep it out of production
 
-- Swipe right on any row to pin or unpin it. Pinned entries always appear in the dedicated “Pinned” section.
-- Use the segmented control at the top of the screen to filter by `Logger.Level`.
-- Searching matches fields such as message, metadata values, file/function names, and identifiers.
+Keep is protected at four layers. The first two are what keep it out of the binary. The other two catch mistakes:
 
-### SwiftUI Previews
+1. **Compile gate.** Add `KEEP_ENABLED` to `SWIFT_ACTIVE_COMPILATION_CONDITIONS` for Development and UAT configurations only. `Diagnostics.swift` compiles to no-ops without it.
+2. **Link exclusion.** For Pilot and Production configurations, set `EXCLUDED_SOURCE_FILE_NAMES = Keep.o`. Keep's code is then not linked into the binary.
+3. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after the link step. Set `KEEP_FORBIDDEN_CONFIGURATIONS` to a semicolon-separated list of configuration names (default `Release`). The build fails if Keep's code or framework is found, and it fails if the executable cannot be read.
+4. **Runtime kill switch.** `Keep.start` detects how the app was distributed. Builds outside `allowedDistributions` (App Store by default) turn Keep off and delete its folder.
 
-`FileLogViewModel.preview` now feeds the view controller with the in-memory `SampleLogs.preview()` dataset so previews are independent of the bundled `log.json` file used elsewhere.
+The example app's Release configuration uses layers 2 and 3. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
 
-## Advanced Topics
+> **Limit of layer 4.** An Ad Hoc build of a production configuration looks the same as an internal Ad Hoc build at runtime, so the runtime check cannot tell them apart. Layers 1 and 2 are the real guard for those builds.
 
-### Custom Metadata
+### Open the log viewer
 
-`KeepLogHandler` merges any metadata you attach through the standard swift-log APIs. Keys containing `token` or `authorization` are automatically redacted when logs are persisted or displayed. Set `KeepConfiguration.redactsSensitiveInformation` to `false` if you need to review unredacted metadata (for example when debugging locally).
+- **Shake** the device on any screen. The shake menu offers *Share report*, *Log viewer*, *Share crashed session* (when there is one) and any tools you registered.
+- **Programmatically**, from a debug menu: `Diagnostics.present()`, which calls `Keep.present()`.
+- **SwiftUI**: `.keepViewer(isPresented:)` shows the viewer as a sheet, using `KeepView`.
 
-### Clearing Logs
+Register your own tools so they appear in the shake menu:
 
-Call `FileLogViewModel.clearLogs` or use the built-in trash button. For in-memory storage this empties the cache; for file-backed storage the JSON file is reset.
+```swift
+Keep.registerTool(title: "Design system") {
+    DesignSystemPreviewCoordinator.present()
+}
+```
 
-### Extending the UI
+Tools run after the menu closes and Keep's window is hidden, so they present over your app.
 
-`FileLogViewController` is UIKit-based, but its rows are rendered using SwiftUI hosting cells. You can fork the repo and swap in custom SwiftUI views for your branding or theming needs.
+### Capture network traffic
+
+Keep stores HTTP transactions from any client. Build a `KeepHTTPTransaction` from a `URLRequest` and its response, and record it:
+
+```swift
+Keep.record(KeepHTTPTransaction(
+    label: "Alamofire",
+    startedAt: startedAt,
+    duration: duration,
+    request: urlRequest,
+    response: response,
+    responseBody: data,
+    error: error
+))
+```
+
+For URLSession, `KeepURLProtocol.install(on:)` captures traffic from a configuration you choose. It forwards each request through its own session, so the app sees the same responses and redirects. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
+
+For Alamofire, use an `EventMonitor` that calls `Keep.record`. The copy-in template includes one, guarded by `#if canImport(Alamofire)`.
+
+### Share a report
+
+Shake, then choose *Share report*, or use the Share button in the viewer. Keep asks for an optional note and builds a zip with:
+
+- `report.txt`: device and app context, the note, and a readable log
+- `logs.jsonl`: one log entry per line
+- `network.har`: HAR 1.2, which opens in browser dev tools and proxy viewers
+- `device.json`: device and app details
+
+The tester picks the destination in the share sheet. Keep does not send anything itself.
+
+### What is stored, and what is not
+
+- **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Killing the app clears them.
+- **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
+- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
+
+### Limits
+
+- **OSLog.** Keep captures swift-log. Direct `os.Logger` and `os_log` calls cannot be intercepted, so route logging through swift-log.
+- **Signal crashes** such as `EXC_BAD_ACCESS` are not captured. MetricKit reports them on the next launch (iOS 14+).
+- **Redaction is pattern-based.** Keep cannot know that a value in a custom format is sensitive. Add `extraPatterns` for those.
 
 ## Contributing
 
@@ -110,6 +156,16 @@ Issues and pull requests are welcome. If you are planning a larger change, open 
 2. Create a feature branch: `git checkout -b feature/my-feature`.
 3. Commit and push: `git commit -m "Add my feature"` followed by `git push origin feature/my-feature`.
 4. Open a pull request describing the change and the motivation behind it.
+
+Before opening a pull request, run `swift test`, `sh Scripts/keep-verify-excluded.test.sh`, and `xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build`.
+
+## Contributors
+
+<a href="https://github.com/theamiro">
+    <img src="https://github.com/theamiro.png?size=96" alt="@theamiro avatar" width="72" height="72" />
+    <br />
+    <sub>@theamiro</sub>
+</a>
 
 ## License
 
