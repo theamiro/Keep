@@ -3,7 +3,10 @@ on:
     push:
         branches: ["develop"]
     pull_request:
-        branches: ["main"]
+        branches: ["develop", "master"]
+    workflow_call:
+permissions:
+    contents: read
 jobs:
     build:
         runs-on: macos-latest
@@ -18,8 +21,27 @@ jobs:
               run: xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build
             - name: Test verification script
               run: sh Scripts/keep-verify-excluded.test.sh
+            - name: Test release notes script
+              run: sh Scripts/keep-release-notes.test.sh
             - name: Build example Release and verify Keep is excluded
               run: >
                 xcodebuild -project KeepiOSExample/KeepiOSExample.xcodeproj -scheme KeepiOSExample
                 -configuration Release -destination 'generic/platform=iOS Simulator'
                 CODE_SIGNING_ALLOWED=NO build
+    release-check:
+        # A merge into master publishes a release, so the PR must name a new, dated version.
+        if: github.event_name == 'pull_request' && github.base_ref == 'master'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Check CHANGELOG.md names a new release
+              run: |
+                  version="$(sh Scripts/keep-release-notes.sh version)"
+                  if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
+                      echo "::error::v$version is already tagged. Add a new dated entry to the top of CHANGELOG.md."
+                      exit 1
+                  fi
+                  echo "Merging this PR releases v$version"

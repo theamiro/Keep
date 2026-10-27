@@ -33,6 +33,7 @@ These protect the reason Keep exists. Do not change them without an ADR in `docs
 | `Sources/Keep/Crash/CrashCapture.swift` | Uncaught-exception handler and MetricKit (iOS 14+) |
 | `Sources/Keep/UI/` | UIKit viewer, shake menu and Keep's window. Wrapped in `#if canImport(UIKit)` |
 | `Scripts/keep-verify-excluded.sh` | Build check. Its tests are in `Scripts/keep-verify-excluded.test.sh` |
+| `Scripts/keep-release-notes.sh` | Reads the release version and notes from `CHANGELOG.md`. Its tests are in `Scripts/keep-release-notes.test.sh` |
 | `Templates/Diagnostics.swift` | Copy-in wrapper for apps. `KeepiOSExample/KeepiOSExample/Diagnostics.swift` is a copy and must stay in sync |
 | `KeepiOSExample/` | Sample app. Debug has `KEEP_ENABLED`. Release excludes Keep and runs the verify phase |
 
@@ -44,6 +45,7 @@ swift test                  # macOS test suite (Swift Testing)
 xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build
 xcodebuild -scheme Keep -destination 'platform=iOS Simulator,name=<installed iPhone>' test
 sh Scripts/keep-verify-excluded.test.sh
+sh Scripts/keep-release-notes.test.sh
 xcodebuild -project KeepiOSExample/KeepiOSExample.xcodeproj -scheme KeepiOSExample \
   -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
 swiftlint lint              # config in .swiftlint.yml. Do not add new warnings
@@ -72,4 +74,14 @@ Project skills live in `.claude/skills/`:
 - Base branch: `develop`.
 - Keep changes focused, and say in the description what you ran to verify them.
 - Call out anything that touches the non-negotiables above.
-- CI is defined in `.github/workflows/build.yml`.
+- CI is defined in `.github/workflows/build.yml`. It runs on pushes to `develop` and on PRs into `develop` and `master`.
+
+## Releases
+
+`master` is the release branch, and every merge into it is a release (`docs/adr/0001-release-from-master.md`).
+
+1. On `develop`, change the top `CHANGELOG.md` entry from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
+2. Open a PR from `develop` into `master`. The `release-check` job fails unless the top entry is dated and `vX.Y.Z` is not tagged yet.
+3. Merge it. `.github/workflows/release.yml` runs the full build again, then tags `vX.Y.Z` on the merged commit and publishes a GitHub release with that entry's notes.
+
+Do not push to `master` directly, and do not tag releases by hand.

@@ -36,17 +36,21 @@ Open `Package.swift` directly in Xcode or double-click `KeepiOSExample/KeepiOSEx
 
 ## Workflow for Code Changes
 
-1. **Fork & branch** – work off a fork and use descriptive branch names such as `feature/file-backed-rotation`.
+1. **Fork & branch** – work off a fork, branch from `develop`, and use descriptive branch names such as `feature/file-backed-rotation`.
 2. **Develop incrementally** – keep commits focused; each commit should build and pass tests.
 3. **Run the test suite** – `swift test` must pass, and `swift build -c release` is encouraged for API or performance changes. When touching the UIKit browser, also verify `KeepiOSExample` in the iOS Simulator via `xcodebuild -scheme KeepiOSExample -destination 'platform=iOS Simulator,name=iPhone 15' build`.
 4. **Document migrations** – if your change requires manual steps (for example, schema updates or configuration switches), describe them in the PR description.
-5. **Open a pull request** – include context, screenshots for UI changes, and link to related issues. Highlight any backwards-incompatible changes at the top of the PR body.
+5. **Open a pull request into `develop`** – include context, screenshots for UI changes, and link to related issues. Highlight any backwards-incompatible changes at the top of the PR body.
+
+## Releases
+
+`master` is the release branch. Every merge into it publishes a release: CI rebuilds and tests the merged commit, tags it `vX.Y.Z` and creates a GitHub release from the top entry of `CHANGELOG.md`. To cut a release, date the top entry on `develop` (`## X.Y.Z (YYYY-MM-DD)`) and open a PR from `develop` into `master`. The PR check fails if the entry is undated or the version is already tagged.
 
 ## Reporting Bugs
 
 - Provide a minimal reproduction snippet or attach a runnable sample project.
 - Share the expected behavior, the actual result, and any crash logs or console output (redact sensitive data first).
-- Mention whether you tested against the latest `main` branch.
+- Mention whether you tested against the latest `develop` branch or a tagged release.
 
 ## Feature Requests
 

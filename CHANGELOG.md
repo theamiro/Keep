@@ -36,4 +36,7 @@ Not yet tagged. Until it is, Swift Package Manager users should pin a branch rat
 ### Changed
 
 - CI builds the UIKit sources for the iOS Simulator and builds the example app's Release configuration, which runs the exclusion check.
+- CI now runs on pull requests into `develop` and `master`. It used to target a `main` branch that does not exist, so pull requests were not checked.
+- `master` is the release branch. A merge into `master` tags `vX.Y.Z` and publishes a GitHub release from the top `CHANGELOG.md` entry. `Scripts/keep-release-notes.sh` reads that entry and fails when it is undated.
+- The ReadME's install snippet pins `master`. It used to pin `main`, which does not exist.
 - The example app uses the local package and has a `KEEP_ENABLED` Debug configuration and a Release configuration that excludes Keep.
