@@ -21,14 +21,14 @@
 
 ### Installation (Swift Package Manager)
 
-Add Keep to your package manifest (pinning the dependency to the `main` branch to follow the most recent changes):
+Add Keep to your package manifest and pin a released version. Releases are tagged from the `master` branch and listed in [`CHANGELOG.md`](CHANGELOG.md):
 
 ```swift
 // Package.swift
 dependencies: [
     .package(
         url: "https://github.com/theamiro/Keep.git",
-        branch: "main"
+        from: "0.1.0"
     )
 ]
 ```
@@ -153,9 +153,9 @@ The note is redacted with the same rules as captured text. The tester picks the 
 Issues and pull requests are welcome. If you are planning a larger change, open an issue first so we can discuss the approach.
 
 1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature/my-feature`.
+2. Create a feature branch from `develop`: `git checkout -b feature/my-feature develop`.
 3. Commit and push: `git commit -m "Add my feature"` followed by `git push origin feature/my-feature`.
-4. Open a pull request describing the change and the motivation behind it.
+4. Open a pull request into `develop` describing the change and the motivation behind it. `master` only receives release PRs.
 
 Before opening a pull request, run `swift test`, `sh Scripts/keep-verify-excluded.test.sh`, and `xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build`.
 
