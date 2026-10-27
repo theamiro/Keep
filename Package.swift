@@ -5,16 +5,20 @@ import PackageDescription
 
 let package = Package(
     name: "Keep",
+    platforms: [
+        .iOS(.v13),
+        .macOS(.v12)
+    ],
     products: [
         .library(
             name: "Keep", targets: ["Keep"]
-        ),
+        )
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.6.3")
     ],
     targets: [
-        .target(name: "Keep", dependencies: [.product(name: "Logging", package: "swift-log")], resources: [.process("Resources/log.json")]),
-        .testTarget(name: "KeepTests", dependencies: ["Keep"]),
+        .target(name: "Keep", dependencies: [.product(name: "Logging", package: "swift-log")]),
+        .testTarget(name: "KeepTests", dependencies: ["Keep"])
     ]
 )

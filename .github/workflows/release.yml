@@ -1,0 +1,52 @@
+name: Release
+# Every merge into master is a release. The version and notes come from the top entry of CHANGELOG.md,
+# which must be "## X.Y.Z (YYYY-MM-DD)". The release is tagged vX.Y.Z on the merged commit.
+on:
+    push:
+        branches: ["master"]
+permissions:
+    contents: read
+concurrency:
+    group: release
+    cancel-in-progress: false
+jobs:
+    validate:
+        uses: ./.github/workflows/build.yml
+    release:
+        needs: validate
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Read the release from CHANGELOG.md
+              id: changelog
+              run: |
+                  version="$(sh Scripts/keep-release-notes.sh version)"
+                  sh Scripts/keep-release-notes.sh notes > "$RUNNER_TEMP/notes.md"
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+            - name: Check the tag is new
+              env:
+                  TAG: v${{ steps.changelog.outputs.version }}
+              run: |
+                  if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+                      if [ "$(git rev-list -n 1 "$TAG")" != "$GITHUB_SHA" ]; then
+                          echo "::error::$TAG already tags another commit. Add a new dated entry to the top of CHANGELOG.md."
+                          exit 1
+                      fi
+                      echo "$TAG already tags this commit. Re-running to finish the release."
+                  fi
+            - name: Publish the GitHub release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: v${{ steps.changelog.outputs.version }}
+                  VERSION: ${{ steps.changelog.outputs.version }}
+              run: |
+                  if gh release view "$TAG" >/dev/null 2>&1; then
+                      echo "$TAG is already released."
+                      exit 0
+                  fi
+                  gh release create "$TAG" --target "$GITHUB_SHA" --title "Keep $VERSION" --notes-file "$RUNNER_TEMP/notes.md"

@@ -1,0 +1,5 @@
+excluded:
+    - .build
+    - Pods
+
+function_parameter_count: 7

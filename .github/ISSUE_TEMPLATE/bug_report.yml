@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a reproducible issue with Keep
+title: "[Bug]: "
+labels:
+  - bug
+  - needs triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please fill out the information below so we can reproduce the issue quickly.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I have searched existing issues and pull requests
+          required: true
+        - label: I am running the latest `main` branch or released version
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Keep version / commit
+      description: Tag, commit SHA, or package version you are using
+      placeholder: e.g. 1.2.0 or 1a2b3c4d
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform(s)
+      multiple: true
+      options:
+        - iOS
+        - macOS
+        - visionOS
+        - tvOS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS version(s)
+      placeholder: e.g. iOS 17.5, macOS 14.5
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What happened and what did you expect instead?
+      placeholder: Clear, concise description of the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps or sample code that reproduces the issue.
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / screenshots
+      description: Attach stack traces, console output, or UI screenshots (redact sensitive data).
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Anything else we should know?
