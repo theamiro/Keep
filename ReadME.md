@@ -21,14 +21,14 @@
 
 ### Installation (Swift Package Manager)
 
-Add Keep to your package manifest. Releases are tagged from the `master` branch; pin the `master` branch until 0.1.0 is tagged, then pin a version:
+Add Keep to your package manifest and pin a released version. Releases are tagged from the `master` branch and listed in [`CHANGELOG.md`](CHANGELOG.md):
 
 ```swift
 // Package.swift
 dependencies: [
     .package(
         url: "https://github.com/theamiro/Keep.git",
-        branch: "master"
+        from: "0.1.0"
     )
 ]
 ```
