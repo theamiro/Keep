@@ -4,7 +4,7 @@ Date: 2026-10-28
 
 ## Status
 
-Accepted. Supersedes [0001](0001-release-from-master.md).
+Accepted. Supersedes [0001](0001-release-from-master.md). Its version rule (minor by default, chosen by label) is superseded by [0004](0004-semver-bump-from-changelog.md).
 
 ## Context
 
