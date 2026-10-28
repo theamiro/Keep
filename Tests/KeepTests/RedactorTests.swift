@@ -1,6 +1,7 @@
 import Foundation
-@testable import Keep
 import Testing
+
+@testable import Keep
 
 @Suite("Redaction")
 struct RedactorTests {

@@ -26,6 +26,17 @@ swift build
 
 Open `Package.swift` directly in Xcode or double-click `KeepiOSExample/KeepiOSExample.xcodeproj` to run the sample application.
 
+### Formatting and Pre-commit Hook
+
+The pre-commit hook in `.githooks` formats staged Swift files with Apple's `swift-format` (settings in `.swift-format`), runs SwiftLint, and blocks the commit on lint errors. `swift-format` ships with Xcode 16 or newer, so install SwiftLint and enable the hook once per clone:
+
+```bash
+brew install swiftlint
+git config core.hooksPath .githooks
+```
+
+The hook stops if a staged Swift file also has unstaged changes, because formatting re-stages whole files.
+
 ## Coding Standards
 
 - Follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/). Prefer clarity over brevity and keep public APIs documented with `///` comments.

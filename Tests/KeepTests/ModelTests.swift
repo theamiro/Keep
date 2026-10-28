@@ -1,7 +1,8 @@
 import Foundation
-@testable import Keep
 import Logging
 import Testing
+
+@testable import Keep
 
 @Suite("Model and tagging")
 struct ModelTests {
@@ -13,12 +14,14 @@ struct ModelTests {
             "e": .stringConvertible(42)
         ]
         let json = JSONValue(metadata: metadata)
-        #expect(json == .object([
-            "a": .string("x"),
-            "b": .object(["c": .string("y")]),
-            "d": .array([.string("z")]),
-            "e": .string("42")
-        ]))
+        #expect(
+            json
+                == .object([
+                    "a": .string("x"),
+                    "b": .object(["c": .string("y")]),
+                    "d": .array([.string("z")]),
+                    "e": .string("42")
+                ]))
     }
 
     @Test func jsonValuesRoundTripThroughCodable() throws {
@@ -49,7 +52,8 @@ struct ModelTests {
     }
 
     @Test func customTagRulesTakePrecedenceInOrder() {
-        let rules = [KeepTagRule(title: "Checkout") { message, _ in message.hasPrefix("checkout") }] + KeepTagRule.defaults
+        let rules =
+            [KeepTagRule(title: "Checkout") { message, _ in message.hasPrefix("checkout") }] + KeepTagRule.defaults
         #expect(KeepTagRule.title(for: "checkout failed", metadataKeys: [], rules: rules) == "Checkout")
     }
 }

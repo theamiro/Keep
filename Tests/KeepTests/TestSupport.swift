@@ -1,7 +1,8 @@
 import CryptoKit
 import Foundation
-@testable import Keep
 import Logging
+
+@testable import Keep
 
 struct StubDetector: KeepDistributionDetecting {
     let value: KeepDistribution
@@ -12,7 +13,8 @@ struct StubDetector: KeepDistributionDetecting {
 
 /// A fresh temporary directory for one test.
 func makeTemporaryDirectory() throws -> URL {
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent("keep-tests-\(UUID().uuidString)", isDirectory: true)
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent(
+        "keep-tests-\(UUID().uuidString)", isDirectory: true)
     try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     return url
 }

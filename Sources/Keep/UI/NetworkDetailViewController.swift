@@ -1,4 +1,5 @@
 #if canImport(UIKit)
+    import SwiftUI
     import UIKit
 
     final class NetworkDetailViewController: KeepDetailViewController {
@@ -96,35 +97,18 @@
         }
 
         private func buildOverview() {
-            let statusColor = KeepTheme.statusColor(transaction.statusCode)
-            let status = PillLabel(
-                text: transaction.statusCode.map(String.init) ?? "ERR",
-                color: statusColor,
-                background: statusColor.withAlphaComponent(0.12)
-            )
-            let method = PillLabel(
-                text: transaction.method.uppercased(),
-                color: .systemIndigo,
-                background: UIColor.systemIndigo.withAlphaComponent(0.12)
-            )
-            let duration = UILabel()
-            duration.text = String(format: "%.0f ms", transaction.duration * 1000)
-            duration.font = KeepTheme.codeFont(ofSize: 11)
-            duration.textColor = .secondaryLabel
-            let summary = UIStackView(arrangedSubviews: [method, status, UIView(), duration])
-            summary.axis = .horizontal
-            summary.alignment = .center
-            summary.spacing = 8
-
-            addSection(title: "Transaction", views: [summary])
+            addSection(title: "Transaction") {
+                TransactionSummary(transaction: transaction)
+            }
             addCodeBlock(title: "URL", text: transaction.url, byteCount: transaction.url.utf8.count)
 
             if let components = URLComponents(string: transaction.url),
-               let queryItems = components.queryItems,
-               !queryItems.isEmpty {
-                addSection(title: "Query Parameters", views: [KeyValueListView(rows: queryItems.map {
-                    KeepKeyValue($0.name, $0.value ?? "")
-                })])
+                let queryItems = components.queryItems,
+                !queryItems.isEmpty
+            {
+                addSection(title: "Query Parameters") {
+                    KeyValueList(rows: queryItems.map { KeepKeyValue($0.name, $0.value ?? "") })
+                }
             }
 
             var details = [
@@ -138,22 +122,23 @@
             if let responseSize = transaction.responseBody?.byteCount {
                 details.append(KeepKeyValue("Response Size", ByteCountDisplay.string(responseSize)))
             }
-            addSection(title: "Timing and Client", views: [KeyValueListView(rows: details)])
+            addSection(title: "Timing and Client") {
+                KeyValueList(rows: details)
+            }
 
             if let error = transaction.errorDescription {
-                let label = UILabel()
-                label.text = error
-                label.font = .preferredFont(forTextStyle: .subheadline)
-                label.adjustsFontForContentSizeCategory = true
-                label.textColor = .systemRed
-                label.numberOfLines = 0
-                addSection(title: "Error", views: [label])
+                addSection(title: "Error") {
+                    Text(error)
+                        .font(.subheadline)
+                        .foregroundStyle(.red)
+                }
             }
         }
 
         private func buildRequestResponse(headers: [String: String], body: KeepBody?, title: String) {
-            let headersView = HeaderDisclosureView(headers: headers)
-            addSection(title: "Headers", views: [headersView])
+            addSection(title: "Headers") {
+                HeadersDisclosure(headers: headers)
+            }
 
             guard let body else {
                 addNoBodyMessage()
@@ -172,7 +157,8 @@
             }
             if body.text.utf8.count >= CodeBlockView.formattingThreshold {
                 let embedded = JSONFormatter.embeddedCandidate(body.text)
-                let startsWithJSON = body.text.first(where: { !$0.isWhitespace })
+                let startsWithJSON =
+                    body.text.first(where: { !$0.isWhitespace })
                     .map { $0 == "{" || $0 == "[" } ?? false
                 if let embedded {
                     addCodeBlock(
@@ -214,19 +200,15 @@
         }
 
         private func addNoBodyMessage() {
-            let empty = UILabel()
-            empty.text = "No body"
-            empty.font = .preferredFont(forTextStyle: .subheadline)
-            empty.textColor = .secondaryLabel
-            addSection(title: "Body", views: [empty])
+            addSection(title: "Body") {
+                KeepNote(text: "No body")
+            }
         }
 
         private func addTruncatedBodyNote(byteCount: Int) {
-            let note = UILabel()
-            note.text = "Truncated · total size \(ByteCountDisplay.string(byteCount))"
-            note.font = .preferredFont(forTextStyle: .caption1)
-            note.textColor = .secondaryLabel
-            addSection(title: "Body Status", views: [note])
+            addSection(title: "Body Status") {
+                KeepNote(text: "Truncated · total size \(ByteCountDisplay.string(byteCount))", font: .caption)
+            }
         }
 
         private func overviewText() -> String {
@@ -260,46 +242,15 @@
         }
     }
 
-    private final class HeaderDisclosureView: UIView {
-        private let button = UIButton(type: .system)
-        private let valuesView: KeyValueListView
-        private var isExpanded = false
-
-        init(headers: [String: String]) {
-            valuesView = KeyValueListView(rows: headers.keys.sorted().map { KeepKeyValue($0, headers[$0] ?? "") })
-            super.init(frame: .zero)
-
-            button.contentHorizontalAlignment = .leading
-            button.titleLabel?.font = .preferredFont(forTextStyle: .subheadline)
-            button.setTitle("\(headers.count) headers", for: .normal)
-            button.setImage(UIImage(systemName: "chevron.right"), for: .normal)
-            button.tintColor = .secondaryLabel
-            button.semanticContentAttribute = .forceRightToLeft
-            button.addTarget(self, action: #selector(toggle), for: .touchUpInside)
-
-            let stack = UIStackView(arrangedSubviews: [button, valuesView])
-            stack.axis = .vertical
-            stack.spacing = 8
-            stack.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(stack)
-            NSLayoutConstraint.activate([
-                stack.topAnchor.constraint(equalTo: topAnchor),
-                stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-                stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-                stack.bottomAnchor.constraint(equalTo: bottomAnchor)
-            ])
-            valuesView.isHidden = true
+    #if DEBUG
+        @available(iOS 17, *)
+        #Preview("Success") {
+            UINavigationController(rootViewController: NetworkDetailViewController(transaction: PreviewSamples.success))
         }
 
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) {
-            fatalError("init(coder:) is not supported")
+        @available(iOS 17, *)
+        #Preview("Failed") {
+            UINavigationController(rootViewController: NetworkDetailViewController(transaction: PreviewSamples.failed))
         }
-
-        @objc private func toggle() {
-            isExpanded.toggle()
-            valuesView.isHidden = !isExpanded
-            button.setImage(UIImage(systemName: isExpanded ? "chevron.down" : "chevron.right"), for: .normal)
-        }
-    }
+    #endif
 #endif

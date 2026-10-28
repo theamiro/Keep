@@ -78,11 +78,11 @@ struct Redactor: Sendable {
     /// JSON bodies get key-based redaction, then every body gets the pattern pass. Non-JSON bodies get only the pattern pass.
     func redact(body: String) -> String {
         guard let data = body.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
-              let redacted = try? JSONSerialization.data(
-                  withJSONObject: redact(jsonObject: object),
-                  options: [.prettyPrinted, .sortedKeys, .fragmentsAllowed]
-              )
+            let object = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+            let redacted = try? JSONSerialization.data(
+                withJSONObject: redact(jsonObject: object),
+                options: [.prettyPrinted, .sortedKeys, .fragmentsAllowed]
+            )
         else {
             return replacePatterns(in: body)
         }
@@ -105,7 +105,7 @@ struct Redactor: Sendable {
         }
         return Self.sensitivePhrases.contains { phrase in
             tokens.indices.dropLast(phrase.count - 1).contains { start in
-                Array(tokens[start ..< start + phrase.count]) == phrase
+                Array(tokens[start..<start + phrase.count]) == phrase
             }
         }
     }
@@ -141,11 +141,11 @@ struct Redactor: Sendable {
 
     private func redact(value: JSONValue) -> JSONValue {
         switch value {
-        case let .string(string):
+        case .string(let string):
             return .string(replacePatterns(in: string))
-        case let .array(array):
+        case .array(let array):
             return .array(array.map(redact(value:)))
-        case let .object(object):
+        case .object(let object):
             return .object(redact(metadata: object))
         }
     }
@@ -195,7 +195,7 @@ struct Redactor: Sendable {
     }
 
     static func isLuhnValid(_ digits: String) -> Bool {
-        guard (13 ... 19).contains(digits.count) else { return false }
+        guard (13...19).contains(digits.count) else { return false }
         var sum = 0
         for (index, character) in digits.reversed().enumerated() {
             guard var value = character.wholeNumberValue else { return false }

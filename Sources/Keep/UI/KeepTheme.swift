@@ -4,6 +4,7 @@
 
 #if canImport(UIKit)
     import Logging
+    import SwiftUI
     import UIKit
 
     extension Logger.Level {
@@ -34,9 +35,21 @@
         var backgroundTint: UIColor {
             uiColor.withAlphaComponent(self >= .error ? 0.1 : 0.08)
         }
+
+        var color: Color {
+            Color(uiColor: uiColor)
+        }
     }
 
     enum KeepTheme {
+        /// Time of day on list rows, to the millisecond.
+        @MainActor static let rowTimeFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "HH:mm:ss.SSS"
+            return formatter
+        }()
+
         static func codeFont(ofSize size: CGFloat = 12, weight: UIFont.Weight = .regular) -> UIFont {
             UIFontMetrics(forTextStyle: .footnote).scaledFont(
                 for: UIFont.monospacedSystemFont(ofSize: size, weight: weight)
@@ -45,11 +58,28 @@
 
         static func statusColor(_ status: Int?) -> UIColor {
             switch status {
-            case let status? where (200 ..< 300).contains(status): return .systemGreen
-            case let status? where (300 ..< 400).contains(status): return .systemBlue
-            case let status? where (400 ..< 500).contains(status): return .systemOrange
+            case let status? where (200..<300).contains(status): return .systemGreen
+            case let status? where (300..<400).contains(status): return .systemBlue
+            case let status? where (400..<500).contains(status): return .systemOrange
             default: return .systemRed
             }
+        }
+    }
+
+    /// The SwiftUI form of `KeepTheme.codeFont`: monospaced, and scaled with Dynamic Type like footnote text.
+    private struct KeepCodeFont: ViewModifier {
+        @ScaledMetric(relativeTo: .footnote) private var scale: CGFloat = 1
+        let size: CGFloat
+        let weight: Font.Weight
+
+        func body(content: Content) -> some View {
+            content.font(.system(size: size * scale, weight: weight, design: .monospaced))
+        }
+    }
+
+    extension View {
+        func keepCodeFont(size: CGFloat = 12, weight: Font.Weight = .regular) -> some View {
+            modifier(KeepCodeFont(size: size, weight: weight))
         }
     }
 

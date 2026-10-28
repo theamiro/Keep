@@ -1,4 +1,5 @@
 #if canImport(UIKit)
+    import SwiftUI
     import UIKit
 
     /// A vertically scrolling detail layout with Copy all and Share actions.
@@ -48,13 +49,14 @@
             }
         }
 
-        func addSection(title: String, views: [UIView]) {
-            let heading = UILabel()
-            heading.text = title.uppercased()
-            heading.font = .preferredFont(forTextStyle: .caption1)
-            heading.adjustsFontForContentSizeCategory = true
-            heading.textColor = .secondaryLabel
+        /// Adds a section whose content is SwiftUI.
+        func addSection<Content: View>(title: String, @ViewBuilder content: () -> Content) {
+            contentStack.addArrangedSubview(KeepHostingView(KeepDetailSection(title: title, content: content)))
+        }
 
+        /// Adds a section whose content includes UIKit views, such as selectable text.
+        func addSection(title: String, views: [UIView]) {
+            let heading = KeepHostingView(KeepSectionHeading(title: title))
             let section = UIStackView(arrangedSubviews: [heading] + views)
             section.axis = .vertical
             section.alignment = .fill
@@ -72,14 +74,7 @@
         ) {
             var views: [UIView] = []
             if let prefix, !prefix.isEmpty {
-                let label = UILabel()
-                label.text = prefix
-                label.font = KeepTheme.codeFont(ofSize: 11)
-                label.adjustsFontForContentSizeCategory = true
-                label.textColor = .secondaryLabel
-                label.numberOfLines = 3
-                label.lineBreakMode = .byTruncatingTail
-                views.append(label)
+                views.append(KeepHostingView(CodeBlockPrefix(text: prefix)))
             }
             let codeBlock = CodeBlockView(
                 title: title,
@@ -168,26 +163,9 @@
         }
 
         override func buildContent() {
-            let header = UIStackView()
-            header.axis = .vertical
-            header.alignment = .leading
-            header.spacing = 9
-
-            let level = PillLabel(
-                text: entry.level.shortCode,
-                color: entry.level.uiColor,
-                background: entry.level.uiColor.withAlphaComponent(0.12)
-            )
-            let timestamp = UILabel()
-            timestamp.text = KeepCodec.displayString(for: entry.timestamp)
-            timestamp.font = KeepTheme.codeFont(ofSize: 11)
-            timestamp.adjustsFontForContentSizeCategory = true
-            timestamp.textColor = .secondaryLabel
-            header.addArrangedSubview(level)
-            header.addArrangedSubview(timestamp)
-
+            // The message stays a UITextView so testers can select part of it.
             let message = makeSelectableTextView(entry.message, font: .preferredFont(forTextStyle: .body))
-            addSection(title: "Message", views: [header, message])
+            addSection(title: "Message", views: [KeepHostingView(LogDetailHeader(entry: entry)), message])
 
             let fields = [
                 KeepKeyValue("Source", entry.source),
@@ -196,7 +174,9 @@
                 KeepKeyValue("Tag", entry.tag),
                 KeepKeyValue("Pinned", entry.isPinned ? "Yes" : "No")
             ]
-            addSection(title: "Details", views: [KeyValueListView(rows: fields)])
+            addSection(title: "Details") {
+                KeyValueList(rows: fields)
+            }
 
             for key in entry.metadata.keys.sorted() {
                 guard let value = entry.metadata[key] else { continue }
@@ -210,7 +190,7 @@
 
         private func addMetadataSection(key: String, value: JSONValue) {
             switch value {
-            case let .string(string):
+            case .string(let string):
                 if string.utf8.count >= CodeBlockView.formattingThreshold {
                     if let candidate = JSONFormatter.embeddedCandidate(string) {
                         addCodeBlock(
@@ -272,4 +252,16 @@
             return lines.joined(separator: "\n")
         }
     }
+
+    #if DEBUG
+        @available(iOS 17, *)
+        #Preview("Error with JSON metadata") {
+            UINavigationController(rootViewController: LogDetailViewController(entry: PreviewSamples.error))
+        }
+
+        @available(iOS 17, *)
+        #Preview("Pinned warning") {
+            UINavigationController(rootViewController: LogDetailViewController(entry: PreviewSamples.pinnedWarning))
+        }
+    #endif
 #endif

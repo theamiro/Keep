@@ -1,7 +1,8 @@
 import Foundation
-@testable import Keep
 import Logging
 import Testing
+
+@testable import Keep
 
 @Suite("swift-log handler")
 struct LogHandlerTests {
@@ -33,16 +34,19 @@ struct LogHandlerTests {
         let core = try makeCore(directory: makeTemporaryDirectory())
         var handler = KeepLogHandler(label: "t", core: core)
         handler.logLevel = .error
-        handler.log(level: .debug, message: "quiet", metadata: nil, source: "t", file: "f.swift", function: "f()", line: 1)
+        handler.log(
+            level: .debug, message: "quiet", metadata: nil, source: "t", file: "f.swift", function: "f()", line: 1)
         core.drainQueue()
         #expect(core.logs.snapshot().isEmpty)
     }
 
     @Test func noOpHandlerIsUsedWhenDisabled() throws {
         let core = try makeCore(makeConfiguration(.appStore), directory: makeTemporaryDirectory())
-        let logger = Logger(label: "disabled", factory: { label in
-            core.isEnabled ? (KeepLogHandler(label: label, core: core) as LogHandler) : SwiftLogNoOpLogHandler()
-        })
+        let logger = Logger(
+            label: "disabled",
+            factory: { label in
+                core.isEnabled ? (KeepLogHandler(label: label, core: core) as LogHandler) : SwiftLogNoOpLogHandler()
+            })
         logger.error("never stored")
         core.drainQueue()
         #expect(core.logs.snapshot().isEmpty)

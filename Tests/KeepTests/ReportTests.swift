@@ -1,7 +1,8 @@
 import Foundation
-@testable import Keep
 import Logging
 import Testing
+
+@testable import Keep
 
 @Suite("Report archive")
 struct ReportTests {

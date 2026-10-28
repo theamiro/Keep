@@ -68,16 +68,17 @@ enum Diagnostics {
             queue.async {
                 let startedAt = self.startDates.removeValue(forKey: request.id) ?? Date()
                 guard let urlRequest = request.request else { return }
-                Keep.record(KeepHTTPTransaction(
-                    label: "Alamofire",
-                    startedAt: startedAt,
-                    duration: Date().timeIntervalSince(startedAt),
-                    request: urlRequest,
-                    response: response.response,
-                    requestBody: urlRequest.httpBody,
-                    responseBody: response.data,
-                    error: response.error
-                ))
+                Keep.record(
+                    KeepHTTPTransaction(
+                        label: "Alamofire",
+                        startedAt: startedAt,
+                        duration: Date().timeIntervalSince(startedAt),
+                        request: urlRequest,
+                        response: response.response,
+                        requestBody: urlRequest.httpBody,
+                        responseBody: response.data,
+                        error: response.error
+                    ))
             }
         }
     }

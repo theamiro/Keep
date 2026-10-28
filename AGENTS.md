@@ -31,7 +31,8 @@ These protect the reason Keep exists. Do not change them without an ADR in `docs
 | `Sources/Keep/Network/` | `KeepHTTPTransaction` (cURL output) and the opt-in `KeepURLProtocol` |
 | `Sources/Keep/Export/` | `ReportBuilder`, HAR output, `DeviceContext` |
 | `Sources/Keep/Crash/CrashCapture.swift` | Uncaught-exception handler and MetricKit (iOS 14+) |
-| `Sources/Keep/UI/` | UIKit viewer, reusable detail components, shake menu and Keep's window. Wrapped in `#if canImport(UIKit)` |
+| `Sources/Keep/UI/` | Viewer controllers (UIKit), shake menu and Keep's window. `KeepHosting.swift` hosts SwiftUI in cells and stacks. Wrapped in `#if canImport(UIKit)` |
+| `Sources/Keep/UI/Components/` | SwiftUI views for rows, pills, key-value lists and detail sections, each with a `#Preview`. The Runestone `CodeBlockView` stays UIKit |
 | `Sources/Keep/Formatting/` | Platform-neutral display formatting for JSON bodies |
 | `Scripts/keep-verify-excluded.sh` | Build check. Its tests are in `Scripts/keep-verify-excluded.test.sh` |
 | `Scripts/keep-strip-viewer-resources.sh` | Removes Runestone resources from non-debug sample builds. Its tests are in `Scripts/keep-strip-viewer-resources.test.sh` |
@@ -60,9 +61,10 @@ Run the macOS tests and the iOS build before opening a PR. Run the iOS test suit
 
 - **Swift 6 language mode** (`swift-tools-version: 6.0`), so strict concurrency applies. UIKit types are `@MainActor`. Shared state is `@unchecked Sendable` behind an `NSLock` (`NSLock.locked` is in `Support/KeepCodec.swift`).
 - **Deployment floor is iOS 15 and macOS 12.** Guard newer APIs with `#available`. Use only SF Symbols that exist on iOS 15.
+- **Custom UI is SwiftUI, screens are UIKit** (`docs/adr/0002-swiftui-views-in-uikit-controllers.md`). Put new views in `UI/Components` and show them with `KeepHostingCell` or `KeepHostingView`. Add a `#Preview` inside `#if DEBUG`, using `PreviewSamples`. Previews of view controllers need `@available(iOS 17, *)`.
 - **Public API is documented** with `///`. Breaking changes go in `CHANGELOG.md` under the next version.
 - **Tests** use Swift Testing with the helpers in `Tests/KeepTests/TestSupport.swift` (`makeCore`, `makeLogger`, `makeConfiguration`). Call `core.drainQueue()` before asserting on captured entries. Only `URLProtocolCaptureTests` may install a core into `KeepRuntime.shared`, because the runtime is process-wide.
-- **Commits** run the hook in `.githooks`, which runs SwiftFormat and `swiftlint --fix` on staged Swift files. Install `swiftformat` and `swiftlint` first. Re-run the tests after the hook has rewritten files.
+- **Commits** run the hook in `.githooks`, which runs `swift-format` (from Xcode 16+) and `swiftlint --fix` on staged Swift files. Install `swiftlint` and run `git config core.hooksPath .githooks` first. Re-run the tests after the hook has rewritten files.
 - **Docs move with code.** Update `ReadME.md` for user-visible behaviour, `CHANGELOG.md` for changes, and `CONTEXT.md` when a term is settled.
 - **Decisions with trade-offs** get an ADR in `docs/adr/` (`NNNN-slug.md`). Use `.claude/skills/grill-with-docs` to work through a design and write the ADR.
 

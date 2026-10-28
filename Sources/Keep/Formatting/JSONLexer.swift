@@ -81,7 +81,7 @@ struct Lexer {
             let character = text[index]
             if character == "\"" {
                 index = text.index(after: index)
-                return Token(kind: .string, text: String(text[start ..< index]), start: start)
+                return Token(kind: .string, text: String(text[start..<index]), start: start)
             }
             if character.unicodeScalars.contains(where: { $0.value < 0x20 }) {
                 failedAt = start
@@ -153,7 +153,7 @@ struct Lexer {
             return nil
         }
         index = cursor
-        return Token(kind: .number, text: String(text[start ..< cursor]), start: start)
+        return Token(kind: .number, text: String(text[start..<cursor]), start: start)
     }
 
     private mutating func scanLiteral(start: String.Index) -> Token? {
@@ -182,6 +182,6 @@ struct Lexer {
 
     private func isDigit(_ character: Character) -> Bool {
         guard character.unicodeScalars.count == 1, let scalar = character.unicodeScalars.first else { return false }
-        return (48 ... 57).contains(scalar.value)
+        return (48...57).contains(scalar.value)
     }
 }

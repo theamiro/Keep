@@ -20,21 +20,24 @@ let package = Package(
         .package(url: "https://github.com/simonbs/TreeSitterLanguages.git", from: "0.1.0")
     ],
     targets: [
-        .target(name: "Keep", dependencies: [
-            .product(name: "Logging", package: "swift-log"),
-            .product(
-                name: "Runestone",
-                package: "Runestone",
-                condition: .when(platforms: [.iOS])
-            ),
-            .product(
-                name: "TreeSitterJSONRunestone",
-                package: "TreeSitterLanguages",
-                condition: .when(platforms: [.iOS])
-            )
-        ], swiftSettings: [
-            .define("KEEP_RUNESTONE", .when(configuration: .debug))
-        ]),
+        .target(
+            name: "Keep",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log"),
+                .product(
+                    name: "Runestone",
+                    package: "Runestone",
+                    condition: .when(platforms: [.iOS])
+                ),
+                .product(
+                    name: "TreeSitterJSONRunestone",
+                    package: "TreeSitterLanguages",
+                    condition: .when(platforms: [.iOS])
+                )
+            ],
+            swiftSettings: [
+                .define("KEEP_RUNESTONE", .when(configuration: .debug))
+            ]),
         .testTarget(name: "KeepTests", dependencies: ["Keep"])
     ]
 )

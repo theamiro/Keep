@@ -86,9 +86,18 @@ private struct Parser {
         switch token.kind {
         case .objectStart: return parseObject(depth: depth)
         case .arrayStart: return parseArray(depth: depth)
-        case .string: append(token.text, kind: .string); advance(); return true
-        case .number: append(token.text, kind: .number); advance(); return true
-        case .literal: append(token.text, kind: .literal); advance(); return true
+        case .string:
+            append(token.text, kind: .string)
+            advance()
+            return true
+        case .number:
+            append(token.text, kind: .number)
+            advance()
+            return true
+        case .literal:
+            append(token.text, kind: .literal)
+            advance()
+            return true
         default: return false
         }
     }
@@ -113,7 +122,10 @@ private struct Parser {
         guard let opening = current, opening.kind == .objectStart else { return false }
         append("{", kind: .punctuation)
         advance()
-        guard let first = current else { isComplete = false; return true }
+        guard let first = current else {
+            isComplete = false
+            return true
+        }
         if first.kind == .objectEnd {
             append("}", kind: .punctuation)
             rootEnd = end(after: first)
@@ -142,14 +154,20 @@ private struct Parser {
                 return true
             }
 
-            guard let separator = current else { isComplete = false; return true }
+            guard let separator = current else {
+                isComplete = false
+                return true
+            }
             if separator.kind == .comma {
                 append(",", kind: .punctuation)
                 output += "\n"
                 advance()
                 continue
             }
-            guard separator.kind == .objectEnd else { isComplete = false; return true }
+            guard separator.kind == .objectEnd else {
+                isComplete = false
+                return true
+            }
             output += "\n"
             indent(depth)
             append("}", kind: .punctuation)
@@ -163,7 +181,10 @@ private struct Parser {
         guard let opening = current, opening.kind == .arrayStart else { return false }
         append("[", kind: .punctuation)
         advance()
-        guard let first = current else { isComplete = false; return true }
+        guard let first = current else {
+            isComplete = false
+            return true
+        }
         if first.kind == .arrayEnd {
             append("]", kind: .punctuation)
             rootEnd = end(after: first)
@@ -178,14 +199,20 @@ private struct Parser {
                 isComplete = false
                 return true
             }
-            guard let separator = current else { isComplete = false; return true }
+            guard let separator = current else {
+                isComplete = false
+                return true
+            }
             if separator.kind == .comma {
                 append(",", kind: .punctuation)
                 output += "\n"
                 advance()
                 continue
             }
-            guard separator.kind == .arrayEnd else { isComplete = false; return true }
+            guard separator.kind == .arrayEnd else {
+                isComplete = false
+                return true
+            }
             output += "\n"
             indent(depth)
             append("]", kind: .punctuation)

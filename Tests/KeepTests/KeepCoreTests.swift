@@ -1,8 +1,9 @@
 import CryptoKit
 import Foundation
-@testable import Keep
 import Logging
 import Testing
+
+@testable import Keep
 
 @Suite("Capture, tagging and lifecycle")
 struct KeepCoreTests {
@@ -79,7 +80,7 @@ struct KeepCoreTests {
         core.drainQueue()
         let pinnedID = try #require(core.logs.snapshot().first?.id)
         #expect(core.togglePin(id: pinnedID) == true)
-        for index in 1 ... 4 {
+        for index in 1...4 {
             logger.info("m\(index)")
         }
         core.drainQueue()

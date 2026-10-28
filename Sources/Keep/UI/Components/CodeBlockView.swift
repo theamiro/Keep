@@ -76,8 +76,9 @@
 
         override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
             super.traitCollectionDidChange(previousTraitCollection)
-            guard traitCollection.preferredContentSizeCategory
-                != previousTraitCollection?.preferredContentSizeCategory
+            guard
+                traitCollection.preferredContentSizeCategory
+                    != previousTraitCollection?.preferredContentSizeCategory
             else {
                 return
             }
@@ -209,7 +210,8 @@
             fullText = text
             let allLines = text.components(separatedBy: "\n")
             let shouldShowAllButton = allLines.count > Self.renderLineLimit && !isShowingAll
-            let visibleText = shouldShowAllButton
+            let visibleText =
+                shouldShowAllButton
                 ? allLines.prefix(Self.renderLineLimit).joined(separator: "\n")
                 : text
             formattedText = syntaxHighlighted ? text : formattedText
@@ -228,8 +230,8 @@
         }
     }
 
-    private extension CodeBlockView {
-        func configure(button: UIButton, symbol: String, action: Selector) {
+    extension CodeBlockView {
+        fileprivate func configure(button: UIButton, symbol: String, action: Selector) {
             button.setImage(UIImage(systemName: symbol), for: .normal)
             button.tintColor = .secondaryLabel
             button.addTarget(self, action: action, for: .touchUpInside)
@@ -258,7 +260,8 @@
         private func calculatedWidth(for text: String) -> CGFloat {
             guard !isWrapping else { return horizontalScroll.bounds.width }
             let attributes = [NSAttributedString.Key.font: calculatedFont]
-            let longestLine = text.split(separator: "\n", omittingEmptySubsequences: false)
+            let longestLine =
+                text.split(separator: "\n", omittingEmptySubsequences: false)
                 .map { ($0 as NSString).size(withAttributes: attributes).width }
                 .max() ?? 0
             return ceil(longestLine + 24)
@@ -283,25 +286,25 @@
             updateTextMetrics()
         }
 
-        @objc func wrapTapped() {
+        @objc fileprivate func wrapTapped() {
             isWrapping.toggle()
             applyWrappingState()
         }
 
-        @objc func copyTapped() {
+        @objc fileprivate func copyTapped() {
             copyFormatted()
         }
 
-        @objc func showAllTapped() {
+        @objc fileprivate func showAllTapped() {
             isShowingAll = true
             setDisplayedText(fullText, syntaxHighlighted: isJSON && formattedText != nil)
         }
 
-        func copyFormatted() {
+        fileprivate func copyFormatted() {
             copyToPasteboard(fullText.isEmpty ? rawText : fullText) { [weak self] in self?.onCopy?() }
         }
 
-        func copyRaw() {
+        fileprivate func copyRaw() {
             copyToPasteboard(rawText) { [weak self] in self?.onCopy?() }
         }
     }
