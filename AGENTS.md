@@ -12,7 +12,7 @@ Use the vocabulary in `CONTEXT.md` (Log entry, Network transaction, Session, Red
 
 These protect the reason Keep exists. Do not change them without an ADR in `docs/adr/` and the user's explicit agreement.
 
-1. **Keep never ships in production.** Only internal configurations (Development, UAT) get `KEEP_ENABLED`. Pilot and Production exclude Keep's object file (`EXCLUDED_SOURCE_FILE_NAMES = Keep.o`) and run `Scripts/keep-verify-excluded.sh`. Apps import Keep only from one file, `Diagnostics.swift`. Do not add a Keep dependency to a module that every configuration links.
+1. **Keep never ships in production.** Only internal app configurations (Development, UAT) get `KEEP_ENABLED`. Pilot and Production exclude Keep and viewer dependency objects; the sample removes Runestone query bundles before running `Scripts/keep-verify-excluded.sh`. The verifier rejects Keep, Runestone and TreeSitter artifacts. Apps import Keep only from one file, `Diagnostics.swift`. Do not add a Keep dependency to a module that every configuration links.
 2. **Memory only.** Sessions live in memory. The only disk write is the encrypted crash snapshot (`Storage/CrashSnapshot.swift`). Any new persistence needs an ADR.
 3. **Redaction is always on.** Every capture path must go through `Redactor` on Keep's queue, or through `KeepHTTPTransaction.redacted`. Do not add a way to turn it off.
 4. **Safety checks fail closed.** The build check and the distribution gate must fail when they cannot decide. An unreadable file is an error, not "no match".
@@ -31,8 +31,10 @@ These protect the reason Keep exists. Do not change them without an ADR in `docs
 | `Sources/Keep/Network/` | `KeepHTTPTransaction` (cURL output) and the opt-in `KeepURLProtocol` |
 | `Sources/Keep/Export/` | `ReportBuilder`, HAR output, `DeviceContext` |
 | `Sources/Keep/Crash/CrashCapture.swift` | Uncaught-exception handler and MetricKit (iOS 14+) |
-| `Sources/Keep/UI/` | UIKit viewer, shake menu and Keep's window. Wrapped in `#if canImport(UIKit)` |
+| `Sources/Keep/UI/` | UIKit viewer, reusable detail components, shake menu and Keep's window. Wrapped in `#if canImport(UIKit)` |
+| `Sources/Keep/Formatting/` | Platform-neutral display formatting for JSON bodies |
 | `Scripts/keep-verify-excluded.sh` | Build check. Its tests are in `Scripts/keep-verify-excluded.test.sh` |
+| `Scripts/keep-strip-viewer-resources.sh` | Removes Runestone resources from non-debug sample builds. Its tests are in `Scripts/keep-strip-viewer-resources.test.sh` |
 | `Scripts/keep-release-notes.sh` | Reads the release version and notes from `CHANGELOG.md`. Its tests are in `Scripts/keep-release-notes.test.sh` |
 | `Templates/Diagnostics.swift` | Copy-in wrapper for apps. `KeepiOSExample/KeepiOSExample/Diagnostics.swift` is a copy and must stay in sync |
 | `KeepiOSExample/` | Sample app. Debug has `KEEP_ENABLED`. Release excludes Keep and runs the verify phase |
@@ -45,6 +47,7 @@ swift test                  # macOS test suite (Swift Testing)
 xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build
 xcodebuild -scheme Keep -destination 'platform=iOS Simulator,name=<installed iPhone>' test
 sh Scripts/keep-verify-excluded.test.sh
+sh Scripts/keep-strip-viewer-resources.test.sh
 sh Scripts/keep-release-notes.test.sh
 xcodebuild -project KeepiOSExample/KeepiOSExample.xcodeproj -scheme KeepiOSExample \
   -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
@@ -56,7 +59,7 @@ Run the macOS tests and the iOS build before opening a PR. Run the iOS test suit
 ## Conventions
 
 - **Swift 6 language mode** (`swift-tools-version: 6.0`), so strict concurrency applies. UIKit types are `@MainActor`. Shared state is `@unchecked Sendable` behind an `NSLock` (`NSLock.locked` is in `Support/KeepCodec.swift`).
-- **Deployment floor is iOS 13 and macOS 12.** Guard iOS 14+ APIs with `#available`. Use only SF Symbols that exist on iOS 13.
+- **Deployment floor is iOS 15 and macOS 12.** Guard newer APIs with `#available`. Use only SF Symbols that exist on iOS 15.
 - **Public API is documented** with `///`. Breaking changes go in `CHANGELOG.md` under the next version.
 - **Tests** use Swift Testing with the helpers in `Tests/KeepTests/TestSupport.swift` (`makeCore`, `makeLogger`, `makeConfiguration`). Call `core.drainQueue()` before asserting on captured entries. Only `URLProtocolCaptureTests` may install a core into `KeepRuntime.shared`, because the runtime is process-wide.
 - **Commits** run the hook in `.githooks`, which runs SwiftFormat and `swiftlint --fix` on staged Swift files. Install `swiftformat` and `swiftlint` first. Re-run the tests after the hook has rewritten files.

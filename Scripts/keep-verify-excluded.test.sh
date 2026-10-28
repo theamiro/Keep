@@ -32,6 +32,18 @@ mkdir -p "$work/clean/frameworks/Keep.framework"
 check "release with Keep.framework fails" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/clean" EXECUTABLE_PATH=App FRAMEWORKS_FOLDER_PATH=frameworks
 rm -rf "$work/clean/frameworks"
 
+mkdir -p "$work/clean/frameworks/Runestone.framework"
+check "release with Runestone.framework fails" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/clean" EXECUTABLE_PATH=App FRAMEWORKS_FOLDER_PATH=frameworks
+rm -rf "$work/clean/frameworks"
+
+mkdir -p "$work/clean/resources/Runestone_Runestone.bundle"
+check "release with Runestone resources fails" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/clean" EXECUTABLE_PATH=App UNLOCALIZED_RESOURCES_FOLDER_PATH=resources
+rm -rf "$work/clean/resources"
+
+mkdir -p "$work/runestone-object"
+printf 'object code $s9Runestone TextView' > "$work/runestone-object/App"
+check "release with Runestone object code fails" 1 CONFIGURATION=Release TARGET_BUILD_DIR="$work/runestone-object" EXECUTABLE_PATH=App
+
 mkdir -p "$work/unreadable"
 printf 'plain' > "$work/unreadable/App"
 chmod 000 "$work/unreadable/App"

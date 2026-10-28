@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+### Changed
+
+- Redesigned the log and network lists with compact rows, scope filters and count badges, and replaced plain-text detail screens with structured sections and formatted code blocks.
+- JSON bodies are pretty-printed and syntax-highlighted with Runestone, including JSON embedded in strings. Code blocks support wrapping, copying formatted or raw text, and showing long content.
+- Raised the iOS deployment floor from iOS 13 to iOS 15.
+
 ## 0.1.1 (2026-10-28)
 
 ### Fixed

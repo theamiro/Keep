@@ -14,7 +14,7 @@ Thank you for taking the time to improve Keep. The project follows the norms use
 | --- | --- |
 | Swift | 6.0 (per `// swift-tools-version`) |
 | Xcode | 15.4 or newer (to build the iOS example and run UI previews) |
-| Platforms | iOS 13+, macOS 11+ |
+| Platforms | iOS 15+, macOS 12+ |
 
 ### Clone and Build
 
@@ -30,7 +30,7 @@ Open `Package.swift` directly in Xcode or double-click `KeepiOSExample/KeepiOSEx
 
 - Follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/). Prefer clarity over brevity and keep public APIs documented with `///` comments.
 - Add or update automated tests in `Tests/KeepTests` whenever you touch behavior.
-- Keep dependencies minimal—`swift-log` is the only external package today. Discuss new dependencies in an issue before opening a PR.
+- Keep dependencies focused. `swift-log`, Runestone, and TreeSitterLanguages are the external packages. Discuss new dependencies in an issue before opening a PR.
 - Ensure new log surface areas remain privacy aware (sensitive keys should be redacted before persistence or display).
 - Update `ReadME.md` and the sample app when you introduce public-facing changes so users can discover them.
 

@@ -186,8 +186,12 @@ class ViewController: UIViewController {
         tableView.delegate = self
 
         for button in [fetchButton, loggingButton, viewLogsButton] {
-            button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-            button.setTitleColor(.label, for: .normal)
+            var configuration = UIButton.Configuration.plain()
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+            configuration.baseForegroundColor = .label
+            configuration.background.backgroundColor = button.backgroundColor
+            button.backgroundColor = nil
+            button.configuration = configuration
         }
 
         view.addSubview(accountLabel)

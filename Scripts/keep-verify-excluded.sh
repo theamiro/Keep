@@ -40,7 +40,9 @@ fi
 # Scans one file for Keep's markers. Each path is passed as a single argument, so spaces are safe.
 scan_file() {
     target="$1"
-    for marker in '_TtC4Keep' '$s4Keep' 'com.keep.core' 'crash-snapshot.bin' 'com.keep.urlprotocol.handled'; do
+    for marker in \
+        '_TtC4Keep' '$s4Keep' 'com.keep.core' 'crash-snapshot.bin' 'com.keep.urlprotocol.handled' \
+        '_TtC9Runestone' '$s9Runestone' 'tree_sitter_json' 'TreeSitterJSONRunestone'; do
         # grep exits 0 on a match, 1 on no match, and 2 on error. An error must never count as "no match".
         status=0
         grep -a -q -- "$marker" "$target" || status=$?
@@ -68,7 +70,11 @@ done
 
 for artifact in \
     "${TARGET_BUILD_DIR:-}/${FRAMEWORKS_FOLDER_PATH:-}/Keep.framework" \
-    "${TARGET_BUILD_DIR:-}/${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}/Keep_Keep.bundle"; do
+    "${TARGET_BUILD_DIR:-}/${FRAMEWORKS_FOLDER_PATH:-}/Runestone.framework" \
+    "${TARGET_BUILD_DIR:-}/${FRAMEWORKS_FOLDER_PATH:-}/TreeSitterJSONRunestone.framework" \
+    "${TARGET_BUILD_DIR:-}/${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}/Keep_Keep.bundle" \
+    "${TARGET_BUILD_DIR:-}/${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}/Runestone_Runestone.bundle" \
+    "${TARGET_BUILD_DIR:-}/${UNLOCALIZED_RESOURCES_FOLDER_PATH:-}/TreeSitterLanguages_TreeSitterJSONQueries.bundle"; do
     if [ -e "$artifact" ]; then
         echo "error: Keep artifact found in the $configuration build: $artifact"
         failures=$((failures + 1))

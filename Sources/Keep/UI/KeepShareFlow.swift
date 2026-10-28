@@ -1,5 +1,4 @@
 #if canImport(UIKit)
-    import Logging
     import UIKit
 
     /// Asks for an optional note, builds the report, and hands it to the system share sheet. The tester picks the destination.
@@ -54,21 +53,6 @@
                     Task { @MainActor in onFinish() }
                 })
                 presenter.present(alert, animated: true)
-            }
-        }
-    }
-
-    extension Logger.Level {
-        /// Colour used for a level in the viewer.
-        var uiColor: UIColor {
-            switch self {
-            case .trace: return .systemGray
-            case .debug: return UIColor(red: 0.4, green: 0.7, blue: 0.9, alpha: 1)
-            case .info: return .systemGreen
-            case .notice: return UIColor(red: 0.0, green: 0.6, blue: 0.8, alpha: 1)
-            case .warning: return .systemOrange
-            case .error: return .systemRed
-            case .critical: return UIColor(red: 0.8, green: 0.0, blue: 0.4, alpha: 1)
             }
         }
     }
