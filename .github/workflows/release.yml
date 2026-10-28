@@ -1,9 +1,9 @@
 name: Release
-# Every merge into master is a release. The version and notes come from the top entry of CHANGELOG.md,
+# Every merge into main is a release. The version and notes come from the top entry of CHANGELOG.md,
 # which must be "## X.Y.Z (YYYY-MM-DD)". The release is tagged vX.Y.Z on the merged commit.
 on:
     push:
-        branches: ["master"]
+        branches: ["main"]
 permissions:
     contents: read
 concurrency:
