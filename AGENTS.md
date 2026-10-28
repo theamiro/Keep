@@ -79,14 +79,15 @@ Project skills live in `.claude/skills/`:
 - Base branch: `develop`.
 - Keep changes focused, and say in the description what you ran to verify them.
 - Call out anything that touches the non-negotiables above.
-- CI is defined in `.github/workflows/build.yml`. It runs on pushes to `develop` and on PRs into `develop` and `master`.
+- CI is defined in `.github/workflows/build.yml`. It runs on pushes to `develop` and on PRs into `develop` and `main`.
 
 ## Releases
 
-`master` is the release branch, and every merge into it is a release (`docs/adr/0001-release-from-master.md`).
+`main` is the release branch, and every merge into it is a release (`docs/adr/0003-release-from-main.md`). Releases are minor versions unless a PR says otherwise.
 
-1. On `develop`, change the top `CHANGELOG.md` entry from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
-2. Open a PR from `develop` into `master`. The `release-check` job fails unless the top entry is dated and `vX.Y.Z` is not tagged yet.
-3. Merge it. `.github/workflows/release.yml` runs the full build again, then tags `vX.Y.Z` on the merged commit and publishes a GitHub release with that entry's notes.
+1. Feature PRs into `develop` add their notes to the top `CHANGELOG.md` entry, `## X.Y.Z (unreleased)`, where `X.Y.Z` is the next release.
+2. Open a PR from `develop` into `main` and date that entry, `## X.Y.Z (YYYY-MM-DD)`. `X.Y.Z` must be the next minor version after the latest `vX.Y.Z` tag. Add a `release:patch` or `release:major` label to make a different bump.
+3. The `release-check` job fails unless the top entry is dated, has notes, and names the expected version.
+4. Merge with a merge commit, not a squash, so `main`'s history stays inside `develop`. `.github/workflows/release.yml` then runs the full build, tags `vX.Y.Z` on the merged commit and publishes a GitHub release with that entry's notes.
 
-Do not push to `master` directly, and do not tag releases by hand.
+Do not push to `main` directly, and do not tag releases by hand.
