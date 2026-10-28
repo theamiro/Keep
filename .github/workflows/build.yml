@@ -29,39 +29,46 @@ jobs:
                 -configuration Release -destination 'generic/platform=iOS Simulator'
                 CODE_SIGNING_ALLOWED=NO build
     release-check:
-        # A merge into main publishes a release. Check the version before merge, where a mistake is cheap.
-        # The version is the next minor after the latest tag, unless the PR has a release:major or
-        # release:patch label. The release itself is published by release.yml after the merge.
-        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        # Checks the CHANGELOG version against the change, before the merge, where a mistake is cheap.
+        # The bump comes from the top entry's headings: patch for Fixed or Security only, otherwise minor.
+        # Only the release:major label makes a major. A PR into main is the release, so it must come from
+        # develop. A PR into develop checks an unreleased top entry, so the version is right before release.
+        # The release itself is published by release.yml after the merge.
+        if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'develop')
         runs-on: ubuntu-latest
         env:
             LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+            BASE_REF: ${{ github.base_ref }}
+            HEAD_REF: ${{ github.head_ref }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v7
               with:
                   fetch-depth: 0
-            - name: Check CHANGELOG.md names the next release
+            - name: Check CHANGELOG.md names the version this change needs
               run: |
-                  has_major=no
-                  has_patch=no
-                  case ",$LABELS," in *,release:major,*) has_major=yes ;; esac
-                  case ",$LABELS," in *,release:patch,*) has_patch=yes ;; esac
-                  if [ "$has_major" = yes ] && [ "$has_patch" = yes ]; then
-                      echo "::error::Use only one of the release:major and release:patch labels."
-                      exit 1
+                  if [ "$BASE_REF" = develop ] && sh Scripts/keep-release-notes.sh version > /dev/null 2>&1; then
+                      echo "The top entry is already dated, so there is no unreleased version to check."
+                      exit 0
                   fi
-                  bump=minor
-                  if [ "$has_major" = yes ]; then bump=major; fi
-                  if [ "$has_patch" = yes ]; then bump=patch; fi
-                  version="$(sh Scripts/keep-release-notes.sh version)"
-                  sh Scripts/keep-release-notes.sh notes > /dev/null
                   latest="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
                   latest="${latest#v}"
                   latest="${latest:-0.0.0}"
+                  bump="$(sh Scripts/keep-release-notes.sh bump)"
+                  case ",$LABELS," in *,release:major,*) bump=major ;; esac
+                  if [ "$BASE_REF" = main ]; then
+                      if [ "$HEAD_REF" != develop ]; then
+                          echo "::error::A PR into main releases Keep, so it must come from develop, not from $HEAD_REF."
+                          exit 1
+                      fi
+                      version="$(sh Scripts/keep-release-notes.sh version)"
+                      sh Scripts/keep-release-notes.sh notes > /dev/null
+                  else
+                      version="$(sh Scripts/keep-release-notes.sh pending)"
+                  fi
                   expected="$(sh Scripts/keep-release-notes.sh next "$bump" "$latest")"
                   if [ "$version" != "$expected" ]; then
-                      echo "::error::This $bump release after v$latest should be $expected, but CHANGELOG.md names $version. Fix the top heading, or add a release:major or release:patch label."
+                      echo "::error::This $bump change after v$latest should be $expected, but CHANGELOG.md names $version. Fix the top heading, or add the release:major label for a major release."
                       exit 1
                   fi
-                  echo "Merging this PR releases v$version ($bump after v$latest)"
+                  echo "CHANGELOG.md names v$version, the $bump release after v$latest."

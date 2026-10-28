@@ -151,9 +151,10 @@ reviews:
     - path: ".github/workflows/**/*.yml"
       instructions: |
         Feature pull requests target develop. A pull request into main is
-        a release: CI must reject an undated version, or one that is not the
-        expected next version (minor by default, or the release:patch or
-        release:major label), and release.yml tags vX.Y.Z from the top
+        a release: CI must reject an undated version, a head other than
+        develop, or one that is not the expected next version (patch when the
+        top entry has only Fixed or Security headings, otherwise minor, and
+        major only with the release:major label), and release.yml tags vX.Y.Z from the top
         CHANGELOG.md entry only after the build and exclusion checks pass.
         Do not drop the verify-excluded, release-notes, or Release example
         build steps. Prefer the existing least-privilege permissions.
@@ -250,12 +251,14 @@ reviews:
           Pass when the base branch is not main.
           When the base branch is main, fail unless the top CHANGELOG.md
           heading matches `## X.Y.Z (YYYY-MM-DD)`, the notes under it are
-          non-empty, X.Y.Z is the next minor version after the latest tag
-          (or the patch or major bump that a release:patch or release:major
-          label selects), and the pull request description says the merge
-          publishes that version.
-          An `unreleased` heading fails a pull request into main and
-          passes a pull request into develop.
+          non-empty, X.Y.Z is the bump after the latest tag that the top
+          entry's headings imply (patch for only Fixed or Security, otherwise
+          minor, major only with the release:major label), the head branch is
+          develop, and the pull request description says the merge publishes
+          that version.
+          An `unreleased` heading fails a pull request into main and, in a
+          pull request into develop, its version must be the bump the headings
+          imply.
 
   tools:
     swiftlint:

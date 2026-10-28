@@ -83,11 +83,10 @@ Project skills live in `.claude/skills/`:
 
 ## Releases
 
-`main` is the release branch, and every merge into it is a release (`docs/adr/0003-release-from-main.md`). Releases are minor versions unless a PR says otherwise.
+`main` is the release branch, and every merge into it is a release (`docs/adr/0003-release-from-main.md`). The version follows the change (`docs/adr/0004-semver-bump-from-changelog.md`): a top entry with only `### Fixed` or `### Security` headings is a patch, any other allowed heading is a minor, and a major needs the `release:major` label.
 
-1. Feature PRs into `develop` add their notes to the top `CHANGELOG.md` entry, `## X.Y.Z (unreleased)`, where `X.Y.Z` is the next release.
-2. Open a PR from `develop` into `main` and date that entry, `## X.Y.Z (YYYY-MM-DD)`. `X.Y.Z` must be the next minor version after the latest `vX.Y.Z` tag. Add a `release:patch` or `release:major` label to make a different bump.
-3. The `release-check` job fails unless the top entry is dated, has notes, and names the expected version.
-4. Merge with a merge commit, not a squash, so `main`'s history stays inside `develop`. `.github/workflows/release.yml` then runs the full build, tags `vX.Y.Z` on the merged commit and publishes a GitHub release with that entry's notes.
+1. Feature PRs into `develop` add their notes to the top `CHANGELOG.md` entry, `## X.Y.Z (unreleased)`, under the headings that describe the change (`### Added`, `### Changed`, `### Fixed` and so on). `release-check` fails if `X.Y.Z` is not the version those headings imply after the latest `vX.Y.Z` tag.
+2. Open a PR from `develop` into `main` and date that entry, `## X.Y.Z (YYYY-MM-DD)`. The head must be `develop`. `release-check` fails unless the top entry is dated, has notes, and names the expected version.
+3. Merge with a merge commit, not a squash, so `main`'s history stays inside `develop`. `.github/workflows/release.yml` then runs the full build, tags `vX.Y.Z` on the merged commit and publishes a GitHub release with that entry's notes.
 
 Do not push to `main` directly, and do not tag releases by hand.
