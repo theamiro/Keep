@@ -1,6 +1,7 @@
 name: Release
 # Every merge into main is a release. The version and notes come from the top entry of CHANGELOG.md,
 # which must be "## X.Y.Z (YYYY-MM-DD)". The release is tagged vX.Y.Z on the merged commit.
+# release-check in build.yml checks that version before the merge, so this job only publishes it.
 on:
     push:
         branches: ["main"]
@@ -19,7 +20,7 @@ jobs:
             contents: write
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
             - name: Read the release from CHANGELOG.md

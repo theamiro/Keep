@@ -4,7 +4,7 @@ Date: 2026-10-27
 
 ## Status
 
-Accepted
+Superseded by [0003](0003-release-from-main.md). The release branch is now `main`.
 
 ## Context
 

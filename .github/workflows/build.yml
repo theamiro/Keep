@@ -1,7 +1,9 @@
 name: Build Validation
 on:
+    push:
+        branches: ["develop"]
     pull_request:
-        branches: ["main"]
+        branches: ["develop", "main"]
     workflow_call:
 permissions:
     contents: read
@@ -10,7 +12,7 @@ jobs:
         runs-on: macos-latest
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v7
             - name: Perform Build Validation
               run: swift build -v
             - name: Run Tests
@@ -27,19 +29,39 @@ jobs:
                 -configuration Release -destination 'generic/platform=iOS Simulator'
                 CODE_SIGNING_ALLOWED=NO build
     release-check:
-        # A merge into master publishes a release, so the PR must name a new, dated version.
-        if: github.event_name == 'pull_request' && github.base_ref == 'master'
+        # A merge into main publishes a release. Check the version before merge, where a mistake is cheap.
+        # The version is the next minor after the latest tag, unless the PR has a release:major or
+        # release:patch label. The release itself is published by release.yml after the merge.
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
         runs-on: ubuntu-latest
+        env:
+            LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         steps:
             - name: Checkout code
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   fetch-depth: 0
-            - name: Check CHANGELOG.md names a new release
+            - name: Check CHANGELOG.md names the next release
               run: |
-                  version="$(sh Scripts/keep-release-notes.sh version)"
-                  if git rev-parse -q --verify "refs/tags/v$version" >/dev/null; then
-                      echo "::error::v$version is already tagged. Add a new dated entry to the top of CHANGELOG.md."
+                  has_major=no
+                  has_patch=no
+                  case ",$LABELS," in *,release:major,*) has_major=yes ;; esac
+                  case ",$LABELS," in *,release:patch,*) has_patch=yes ;; esac
+                  if [ "$has_major" = yes ] && [ "$has_patch" = yes ]; then
+                      echo "::error::Use only one of the release:major and release:patch labels."
                       exit 1
                   fi
-                  echo "Merging this PR releases v$version"
+                  bump=minor
+                  if [ "$has_major" = yes ]; then bump=major; fi
+                  if [ "$has_patch" = yes ]; then bump=patch; fi
+                  version="$(sh Scripts/keep-release-notes.sh version)"
+                  sh Scripts/keep-release-notes.sh notes > /dev/null
+                  latest="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+                  latest="${latest#v}"
+                  latest="${latest:-0.0.0}"
+                  expected="$(sh Scripts/keep-release-notes.sh next "$bump" "$latest")"
+                  if [ "$version" != "$expected" ]; then
+                      echo "::error::This $bump release after v$latest should be $expected, but CHANGELOG.md names $version. Fix the top heading, or add a release:major or release:patch label."
+                      exit 1
+                  fi
+                  echo "Merging this PR releases v$version ($bump after v$latest)"

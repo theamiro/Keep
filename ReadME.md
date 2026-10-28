@@ -23,7 +23,7 @@ Keep supports iOS 15 and later.
 
 ### Installation (Swift Package Manager)
 
-Add Keep to your package manifest and pin a released version. Releases are tagged from the `master` branch and listed in [`CHANGELOG.md`](CHANGELOG.md):
+Add Keep to your package manifest and pin a released version. Releases are tagged from the `main` branch and listed in [`CHANGELOG.md`](CHANGELOG.md):
 
 ```swift
 // Package.swift
@@ -162,7 +162,7 @@ Issues and pull requests are welcome. If you are planning a larger change, open 
 1. Fork the repository.
 2. Create a feature branch from `develop`: `git checkout -b feature/my-feature develop`.
 3. Commit and push: `git commit -m "Add my feature"` followed by `git push origin feature/my-feature`.
-4. Open a pull request into `develop` describing the change and the motivation behind it. `master` only receives release PRs.
+4. Open a pull request into `develop` describing the change and the motivation behind it. `main` only receives release PRs.
 
 Before opening a pull request, run `swift test`, `sh Scripts/keep-verify-excluded.test.sh`, and `xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build`.
 

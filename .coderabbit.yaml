@@ -30,10 +30,10 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
-    # develop is the default branch. master is the release branch.
+    # develop is the integration branch. main is the release branch.
     base_branches:
       - "^develop$"
-      - "^master$"
+      - "^main$"
 
   # People approve. These limits still apply if someone asks CodeRabbit to
   # approve: a matching path withholds approval.
@@ -150,10 +150,11 @@ reviews:
 
     - path: ".github/workflows/**/*.yml"
       instructions: |
-        Feature pull requests target develop. A pull request into master is
-        a release: CI must reject an undated or already-tagged version, and
-        release.yml tags vX.Y.Z from the top CHANGELOG.md entry only after
-        the build and exclusion checks pass.
+        Feature pull requests target develop. A pull request into main is
+        a release: CI must reject an undated version, or one that is not the
+        expected next version (minor by default, or the release:patch or
+        release:major label), and release.yml tags vX.Y.Z from the top
+        CHANGELOG.md entry only after the build and exclusion checks pass.
         Do not drop the verify-excluded, release-notes, or Release example
         build steps. Prefer the existing least-privilege permissions.
 
@@ -170,7 +171,7 @@ reviews:
     - path: "CHANGELOG.md"
       instructions: |
         The top heading is `## X.Y.Z (unreleased)` on develop. A release
-        pull request into master dates it as `## X.Y.Z (YYYY-MM-DD)`.
+        pull request into main dates it as `## X.Y.Z (YYYY-MM-DD)`.
         Reject a malformed heading, an empty entry, or a version that skips
         the notes for a breaking public-API change.
 
@@ -183,7 +184,7 @@ reviews:
       mode: warning
       requirements: |
         Use a concise imperative title that says what changed.
-        A release pull request into master names the version, for example
+        A release pull request into main names the version, for example
         "Release 0.2.0".
     description:
       mode: warning
@@ -246,12 +247,14 @@ reviews:
       - name: Release changelog
         mode: warning
         instructions: |
-          Pass when the base branch is not master.
-          When the base branch is master, fail unless the top CHANGELOG.md
+          Pass when the base branch is not main.
+          When the base branch is main, fail unless the top CHANGELOG.md
           heading matches `## X.Y.Z (YYYY-MM-DD)`, the notes under it are
-          non-empty, and the pull request description says the merge
+          non-empty, X.Y.Z is the next minor version after the latest tag
+          (or the patch or major bump that a release:patch or release:major
+          label selects), and the pull request description says the merge
           publishes that version.
-          An `unreleased` heading fails a pull request into master and
+          An `unreleased` heading fails a pull request into main and
           passes a pull request into develop.
 
   tools:
