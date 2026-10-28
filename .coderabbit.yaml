@@ -1,0 +1,320 @@
+# CodeRabbit review configuration for Keep.
+# Invariants live in AGENTS.md (auto-discovered). This file adds review
+# scope, path checks, and the pass/fail conditions CI does not already cover.
+# https://docs.coderabbit.ai/reference/configuration
+
+language: en-US
+
+# Schema limit: 250 characters. Longer review guidance belongs in
+# reviews.high_level_summary_instructions and reviews.path_instructions.
+tone_instructions: >
+  Be direct and specific. Use Keep's terms (log entry, network transaction,
+  session, redaction, report, tester). Prioritize privacy,
+  production-exclusion, and data-loss bugs. Skip nits SwiftLint or
+  swift-format already enforce.
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  high_level_summary_instructions: |
+    Write a short walkthrough for a Keep maintainer.
+    Name the behavior that changed, using Keep's terms (log entry, network
+    transaction, session, redaction, shake menu, tool, log viewer, report,
+    internal build, production build, tester).
+    Say whether production exclusion, redaction, or on-disk persistence is
+    affected. Do not invent a version number or rewrite CHANGELOG.md.
+  review_status: true
+  review_details: false
+  poem: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    # develop is the integration branch. main is the release branch.
+    base_branches:
+      - "^develop$"
+      - "^main$"
+
+  # People approve. These limits still apply if someone asks CodeRabbit to
+  # approve: a matching path withholds approval.
+  auto_approvals:
+    enabled: false
+    overrides:
+      - enabled: false
+        paths:
+          - "Sources/Keep/Redaction/**"
+          - "Sources/Keep/Storage/**"
+          - "Sources/Keep/Configuration/**"
+          - "Sources/Keep/Network/**"
+          - "Scripts/keep-verify-excluded.sh"
+          - "Scripts/keep-strip-viewer-resources.sh"
+          - "Scripts/keep-release-notes.sh"
+          - "Templates/Diagnostics.swift"
+          - "KeepiOSExample/**/Diagnostics.swift"
+          - ".github/workflows/**"
+
+  # Exclusions only. A bare include would limit review to that path.
+  # `**/Package.resolved` overrides CodeRabbit's default ignore so dependency
+  # pins are reviewed. It is not an allowlist.
+  path_filters:
+    - "**/Package.resolved"
+    - "!**/.build/**"
+    - "!**/xcuserdata/**"
+    - "!**/*.xcuserstate"
+
+  path_instructions:
+    - path: "Sources/Keep/**/*.swift"
+      instructions: |
+        Swift 6 language mode: strict concurrency applies. UIKit types are
+        @MainActor. Shared mutable state is @unchecked Sendable behind an
+        NSLock (NSLock.locked is in Support/KeepCodec.swift).
+        Deployment floor is iOS 15 and macOS 12. Guard newer APIs with
+        #available, and use only SF Symbols that exist on iOS 15.
+        Public and open declarations need a /// comment. Internal and private
+        ones do not.
+        Flag a new disk write, a capture path that skips redaction, or a Keep
+        import that a production configuration can link.
+
+    - path: "Sources/Keep/{Redaction,Network,Export,Crash}/**/*.swift"
+      instructions: |
+        Redaction is always on. Every capture path goes through Redactor on
+        Keep's queue, or through KeepHTTPTransaction.redacted, before the
+        value is retained or displayed.
+        Reject a switch, configuration flag, or build setting that turns
+        redaction off. An allow-listed key is the only value left untouched.
+        A check that cannot decide must fail closed.
+
+    - path: "Sources/Keep/Storage/**/*.swift"
+      instructions: |
+        Sessions live in memory (MemoryBuffer). The only allowed disk write
+        is the encrypted crash snapshot in CrashSnapshot.swift, removed on
+        the next launch, with its key in the Keychain.
+        Reject UserDefaults, files, or databases holding log entries or
+        network transactions. New persistence needs an ADR in docs/adr/.
+
+    - path: "Sources/Keep/UI/**/*.swift"
+      instructions: |
+        Follow docs/adr/0002-swiftui-views-in-uikit-controllers.md.
+        Views Keep draws itself go in UI/Components as SwiftUI. View
+        controllers, table views, navigation, search, Keep's window, the
+        share sheet, and the Runestone code block stay UIKit.
+        Host SwiftUI with KeepHostingCell or KeepHostingView. Add a #Preview
+        inside #if DEBUG using PreviewSamples. Controller previews need
+        @available(iOS 17, *).
+        Lists that update several times a second stay diffable table views.
+        The selectable log message stays a UITextView.
+
+    - path: "Sources/Keep/{Keep.swift,Configuration/**}"
+      instructions: |
+        This is the public facade. Document new public API with /// and
+        record breaking changes in CHANGELOG.md.
+        Keep starts only in internal builds. Do not treat a Release build
+        configuration as a production build: a Release configuration can
+        still be internal. Production builds never contain Keep.
+
+    - path: "{Templates/Diagnostics.swift,KeepiOSExample/**/Diagnostics.swift}"
+      instructions: |
+        These two files are copies and must stay in sync. A host app imports
+        Keep only from Diagnostics.swift. Reject a new Keep import anywhere
+        else, and reject a Keep dependency on a target that every
+        configuration links.
+
+    - path: "KeepiOSExample/**"
+      instructions: |
+        Debug defines KEEP_ENABLED and links Keep. The Release configuration
+        excludes Keep, Runestone, and TreeSitter, strips viewer resources,
+        and runs Scripts/keep-verify-excluded.sh.
+        Reject a change that lets the Release build link or embed those
+        products. Viewer changes need a simulator build of KeepiOSExample.
+
+    - path: "Tests/KeepTests/**/*.swift"
+      instructions: |
+        Use Swift Testing (import Testing, @Test, #expect) and the helpers
+        in TestSupport.swift: makeCore, makeLogger, makeConfiguration.
+        Call core.drainQueue() before asserting on captured entries.
+        Only URLProtocolCaptureTests may install a core into
+        KeepRuntime.shared.
+        Fixture secrets (Bearer samples, JWTs, passwords) are intentional.
+        Flag a value that looks like a real credential. Assert the secret is
+        absent after redaction.
+
+    - path: "Scripts/**/*.sh"
+      instructions: |
+        Safety checks fail closed. An unreadable, empty, or unparseable
+        input is an error, not a pass.
+        keep-verify-excluded.sh rejects Keep, Runestone, and TreeSitter
+        artifacts. keep-release-notes.sh rejects an undated, malformed, or
+        empty CHANGELOG heading.
+        Update the matching Scripts/*.test.sh in the same change. ShellCheck
+        findings are in scope.
+
+    - path: ".github/workflows/**/*.yml"
+      instructions: |
+        Feature pull requests target develop. A pull request into main is
+        a release: CI must reject an undated version, or one that is not the
+        expected next version (minor by default, or the release:patch or
+        release:major label), and release.yml tags vX.Y.Z from the top
+        CHANGELOG.md entry only after the build and exclusion checks pass.
+        Do not drop the verify-excluded, release-notes, or Release example
+        build steps. Prefer the existing least-privilege permissions.
+
+    - path: "Package.swift"
+      instructions: |
+        swift-tools-version is 6.0. Platforms stay iOS 15 and macOS 12.
+        Runestone and TreeSitterLanguages are linked only on iOS, and
+        KEEP_RUNESTONE is defined only in debug.
+        swift-log, Runestone, and TreeSitterLanguages are the external
+        packages. A new dependency needs an issue discussion before the PR.
+        When Package.resolved changes, name the dependency and the version
+        bump in the review.
+
+    - path: "CHANGELOG.md"
+      instructions: |
+        The top heading is `## X.Y.Z (unreleased)` on develop. A release
+        pull request into main dates it as `## X.Y.Z (YYYY-MM-DD)`.
+        Reject a malformed heading, an empty entry, or a version that skips
+        the notes for a breaking public-API change.
+
+  # LLM judgments. They warn; they do not block. The shell checks and
+  # `swift test` in CI are the hard gate.
+  pre_merge_checks:
+    docstrings:
+      mode: off
+    title:
+      mode: warning
+      requirements: |
+        Use a concise imperative title that says what changed.
+        A release pull request into main names the version, for example
+        "Release 0.2.0".
+    description:
+      mode: warning
+      requirements: |
+        Say what changed and why.
+        Name the commands that verified it. Behavior changes need
+        `swift test`. Viewer changes also need an iOS simulator build.
+        Call out any effect on production exclusion, redaction, or
+        persistence. UI changes need screenshots. Put breaking public-API
+        changes at the top.
+    custom_checks:
+      - name: Production exclusion
+        mode: warning
+        instructions: |
+          Fail if the diff links Keep, Runestone, or TreeSitter into a
+          production or Release configuration, adds a Keep import outside
+          Templates/Diagnostics.swift and
+          KeepiOSExample/KeepiOSExample/Diagnostics.swift, or makes
+          Scripts/keep-verify-excluded.sh or
+          Scripts/keep-strip-viewer-resources.sh pass when the input is
+          unreadable or a match is inconclusive.
+          Pass when those areas are unchanged, or when KEEP_ENABLED stays
+          on internal configurations only and the sample Release build
+          still excludes Keep.
+      - name: Redaction stays on
+        mode: warning
+        instructions: |
+          Fail if a capture path retains or displays a log entry, metadata
+          value, header, URL, or body without Redactor on Keep's queue or
+          KeepHTTPTransaction.redacted, or if the diff adds a way to turn
+          redaction off.
+          Pass when no capture path changed, or when every new capture path
+          redacts before the value is retained.
+      - name: Memory-only sessions
+        mode: warning
+        instructions: |
+          Fail if the diff writes log entries or network transactions to
+          disk, UserDefaults, a file, or a database. The encrypted crash
+          snapshot in Sources/Keep/Storage/CrashSnapshot.swift is the only
+          allowed disk write.
+          Pass when no new persistence was added.
+      - name: Public API docs
+        mode: warning
+        instructions: |
+          Fail if a new or changed public or open declaration in
+          Sources/Keep has no /// comment, or if a breaking change to that
+          API is missing from CHANGELOG.md.
+          Pass when no public or open declaration changed, or when each one
+          is documented and breaking changes are in the changelog.
+          Private, internal, preview, and test declarations pass without a
+          doc comment.
+      - name: Behavior has tests
+        mode: warning
+        instructions: |
+          Fail if capture, redaction, storage, export, network, or
+          configuration behavior changes without a corresponding change in
+          Tests/KeepTests or Scripts/*.test.sh.
+          Pass for docs-only diffs, and for SwiftUI view diffs that add or
+          update a #Preview.
+      - name: Release changelog
+        mode: warning
+        instructions: |
+          Pass when the base branch is not main.
+          When the base branch is main, fail unless the top CHANGELOG.md
+          heading matches `## X.Y.Z (YYYY-MM-DD)`, the notes under it are
+          non-empty, X.Y.Z is the next minor version after the latest tag
+          (or the patch or major bump that a release:patch or release:major
+          label selects), and the pull request description says the merge
+          publishes that version.
+          An `unreleased` heading fails a pull request into main and
+          passes a pull request into develop.
+
+  tools:
+    swiftlint:
+      enabled: true
+      config_file: .swiftlint.yml
+    shellcheck:
+      enabled: true
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+    unit_tests:
+      enabled: true
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      # Root files apply to the whole tree. ADRs live under docs/adr, so
+      # they need an explicit applyTo or they only govern that directory.
+      - CONTEXT.md
+      - CONTRIBUTING.md
+      - files: docs/adr/**/*.md
+        applyTo: "**/*.swift,Scripts/**/*.sh,.github/workflows/**,CHANGELOG.md,Package.swift,Templates/**,KeepiOSExample/**"
+  learnings:
+    scope: local
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
+
+code_generation:
+  docstrings:
+    language: en-US
+    path_instructions:
+      - path: "Sources/Keep/**/*.swift"
+        instructions: |
+          Write /// comments on public and open declarations only.
+          Describe behavior a host-app author needs, in Keep's vocabulary
+          from CONTEXT.md. Do not document private or internal code,
+          previews, or layout. Do not promise that redaction can be turned
+          off, or that Keep ships in a production build.
+  unit_tests:
+    path_instructions:
+      - path: "Sources/Keep/**/*.swift"
+        instructions: |
+          Add Swift Testing tests in Tests/KeepTests (@Test, #expect).
+          Build state with makeCore, makeLogger, and makeConfiguration from
+          TestSupport.swift. Call core.drainQueue() before asserting on
+          captured entries. Do not install a core into KeepRuntime.shared
+          except in URLProtocolCaptureTests.
+      - path: "Scripts/**/*.sh"
+        instructions: |
+          Extend the matching Scripts/*.test.sh. Assertions fail closed:
+          an unreadable or malformed input must be a test failure.

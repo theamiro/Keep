@@ -70,6 +70,15 @@ chmod 644 "$work/unreadable.md"
 
 check "unknown mode fails" 1 "" publish "$work/released.md"
 
+check "next minor resets patch" 0 "1.3.0" next minor 1.2.4
+check "next patch" 0 "1.2.5" next patch 1.2.4
+check "next major resets minor and patch" 0 "2.0.0" next major 1.2.4
+check "next from 0.1.1 minor is 0.2.0" 0 "0.2.0" next minor 0.1.1
+check "next with unknown bump fails" 1 "" next huge 1.2.4
+check "next with two-part version fails" 1 "" next minor 1.2
+check "next with v-prefixed version fails" 1 "" next minor v1.2.4
+check "next with no version fails" 1 "" next minor
+
 if [ "$failures" -gt 0 ]; then
     echo "$failures check(s) failed"
     exit 1
