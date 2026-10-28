@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 (unreleased)
+
+### Fixed
+
+- Shaking the device crashed with `-[UIWindowScene keep_motionEnded:with:]: unrecognized selector` (#9). Keep exchanged `UIWindow.motionEnded` with a renamed selector, and UIKit forwards motion events to the next responder under the name it was called with. Keep now replaces the implementation and calls the previous one under `motionEnded(_:with:)`, so the shake reaches the window scene and the app as before.
+
 ## 0.1.0 (2026-10-27)
 
 ### Breaking changes

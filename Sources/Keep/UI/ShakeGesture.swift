@@ -2,8 +2,10 @@
     import ObjectiveC
     import UIKit
 
-    /// Opens Keep on shake. Swizzles `UIWindow.motionEnded` once; the original implementation still runs.
+    /// Opens Keep on shake. Replaces `UIWindow.motionEnded` once; the previous implementation still runs.
     enum ShakeGesture {
+        private typealias MotionEndedIMP = @convention(c) (UIWindow, Selector, UIEvent.EventSubtype, UIEvent?) -> Void
+
         private nonisolated(unsafe) static var handler: (@MainActor (UIWindowScene?) -> Void)?
         private nonisolated(unsafe) static var installed = false
 
@@ -13,40 +15,33 @@
             guard !installed else { return }
             installed = true
 
-            let originalSelector = #selector(UIResponder.motionEnded(_:with:))
-            let swizzledSelector = #selector(UIWindow.keep_motionEnded(_:with:))
-            guard let originalMethod = class_getInstanceMethod(UIWindow.self, originalSelector),
-                  let swizzledMethod = class_getInstanceMethod(UIWindow.self, swizzledSelector) else { return }
-            if class_addMethod(
-                UIWindow.self,
-                originalSelector,
-                method_getImplementation(swizzledMethod),
-                method_getTypeEncoding(swizzledMethod)
-            ) {
-                class_replaceMethod(
-                    UIWindow.self,
-                    swizzledSelector,
-                    method_getImplementation(originalMethod),
-                    method_getTypeEncoding(originalMethod)
-                )
-            } else {
-                method_exchangeImplementations(originalMethod, swizzledMethod)
+            let selector = #selector(UIResponder.motionEnded(_:with:))
+            guard let method = class_getInstanceMethod(UIWindow.self, selector),
+                  let superclass = class_getSuperclass(UIWindow.self) else { return }
+
+            // UIKit forwards motion events to the next responder under `_cmd`, so the previous
+            // implementation must run under the original selector. Exchanging selectors sent
+            // `keep_motionEnded:with:` to the window scene, which crashed.
+            var previousIMP: IMP?
+            typealias Replacement = @convention(block) (UIWindow, UIEvent.EventSubtype, UIEvent?) -> Void
+            let replacement: Replacement = { window, motion, event in
+                // When UIWindow inherits the method, look it up on each call so later changes to the superclass apply.
+                if let previous = previousIMP ?? class_getMethodImplementation(superclass, selector) {
+                    unsafeBitCast(previous, to: MotionEndedIMP.self)(window, selector, motion, event)
+                }
+                if motion == .motionShake {
+                    shakeDetected(from: window)
+                }
+            }
+            let replacementIMP = imp_implementationWithBlock(replacement)
+            if !class_addMethod(UIWindow.self, selector, replacementIMP, method_getTypeEncoding(method)) {
+                previousIMP = method_setImplementation(method, replacementIMP)
             }
         }
 
-        fileprivate static func shakeDetected(from scene: UIWindowScene?) {
+        private static func shakeDetected(from window: UIWindow) {
             guard let handler else { return }
-            Task { @MainActor in handler(scene) }
-        }
-    }
-
-    extension UIWindow {
-        /// After the swap this selector runs the original `motionEnded`, so calling it first keeps the app's behaviour.
-        @objc func keep_motionEnded(_ motion: UIEvent.EventSubtype, with event: UIEvent?) {
-            keep_motionEnded(motion, with: event)
-            if motion == .motionShake {
-                ShakeGesture.shakeDetected(from: windowScene)
-            }
+            Task { @MainActor in handler(window.windowScene) }
         }
     }
 #endif
