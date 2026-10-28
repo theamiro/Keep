@@ -1,6 +1,7 @@
 import Foundation
-@testable import Keep
 import Testing
+
+@testable import Keep
 
 @Suite("Memory buffer")
 struct MemoryBufferTests {

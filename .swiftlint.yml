@@ -3,3 +3,6 @@ excluded:
     - Pods
 
 function_parameter_count: 7
+
+opening_brace:
+    ignore_multiline_statement_conditions: true

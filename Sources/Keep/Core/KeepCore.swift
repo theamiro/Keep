@@ -50,7 +50,8 @@ final class KeepCore: @unchecked Sendable {
         )
 
         if isEnabled {
-            let store = configuration.crashSnapshotsEnabled
+            let store =
+                configuration.crashSnapshotsEnabled
                 ? SnapshotStore(directory: storageDirectory, key: makeKey())
                 : nil
             snapshotStore = store
@@ -64,7 +65,8 @@ final class KeepCore: @unchecked Sendable {
     }
 
     static func defaultStorageDirectory() -> URL {
-        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let support =
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return support.appendingPathComponent("Keep", isDirectory: true)
     }
@@ -118,11 +120,12 @@ final class KeepCore: @unchecked Sendable {
             source: "Keep", file: #fileID, function: #function, line: #line
         )
         logs.append(entry)
-        snapshotStore?.write(CrashSnapshot(
-            sessionStartedAt: sessionStartedAt,
-            logs: logs.snapshot(),
-            transactions: transactions.snapshot()
-        ))
+        snapshotStore?.write(
+            CrashSnapshot(
+                sessionStartedAt: sessionStartedAt,
+                logs: logs.snapshot(),
+                transactions: transactions.snapshot()
+            ))
     }
 
     /// Records a crash report delivered later by MetricKit into the current session.

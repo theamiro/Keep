@@ -14,7 +14,7 @@ Thank you for taking the time to improve Keep. The project follows the norms use
 | --- | --- |
 | Swift | 6.0 (per `// swift-tools-version`) |
 | Xcode | 15.4 or newer (to build the iOS example and run UI previews) |
-| Platforms | iOS 13+, macOS 11+ |
+| Platforms | iOS 15+, macOS 12+ |
 
 ### Clone and Build
 
@@ -26,11 +26,22 @@ swift build
 
 Open `Package.swift` directly in Xcode or double-click `KeepiOSExample/KeepiOSExample.xcodeproj` to run the sample application.
 
+### Formatting and Pre-commit Hook
+
+The pre-commit hook in `.githooks` formats staged Swift files with Apple's `swift-format` (settings in `.swift-format`), runs SwiftLint, and blocks the commit on lint errors. `swift-format` ships with Xcode 16 or newer, so install SwiftLint and enable the hook once per clone:
+
+```bash
+brew install swiftlint
+git config core.hooksPath .githooks
+```
+
+The hook stops if a staged Swift file also has unstaged changes, because formatting re-stages whole files.
+
 ## Coding Standards
 
 - Follow the [Swift API Design Guidelines](https://www.swift.org/documentation/api-design-guidelines/). Prefer clarity over brevity and keep public APIs documented with `///` comments.
 - Add or update automated tests in `Tests/KeepTests` whenever you touch behavior.
-- Keep dependencies minimal—`swift-log` is the only external package today. Discuss new dependencies in an issue before opening a PR.
+- Keep dependencies focused. `swift-log`, Runestone, and TreeSitterLanguages are the external packages. Discuss new dependencies in an issue before opening a PR.
 - Ensure new log surface areas remain privacy aware (sensitive keys should be redacted before persistence or display).
 - Update `ReadME.md` and the sample app when you introduce public-facing changes so users can discover them.
 

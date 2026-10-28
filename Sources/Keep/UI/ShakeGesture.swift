@@ -17,7 +17,8 @@
 
             let selector = #selector(UIResponder.motionEnded(_:with:))
             guard let method = class_getInstanceMethod(UIWindow.self, selector),
-                  let superclass = class_getSuperclass(UIWindow.self) else { return }
+                let superclass = class_getSuperclass(UIWindow.self)
+            else { return }
 
             // UIKit forwards motion events to the next responder under `_cmd`, so the previous
             // implementation must run under the original selector. Exchanging selectors sent

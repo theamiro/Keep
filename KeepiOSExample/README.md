@@ -5,7 +5,7 @@ This sample finance dashboard app demonstrates how to embed the Keep runtime log
 ## Requirements
 
 - Xcode 15 or newer
-- iOS 13.0 deployment target (can run on the simulator or a device)
+- iOS 15.0 deployment target (can run on the simulator or a device)
 - Swift 5.9 toolchain (Keep targets Swift Concurrency)
 
 ## Run the Demo

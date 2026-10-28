@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Combined SwiftFormat + SwiftLint pre-commit hook
-# - Formats staged .swift files with SwiftFormat
+# Combined swift-format + SwiftLint pre-commit hook
+# - Formats staged .swift files with swift-format (Xcode toolchain)
 # - Runs SwiftLint --fix on those files
 # - Re-adds them to the index
 # - Lints staged files and blocks commit on remaining violations
@@ -19,10 +19,10 @@ command_exists() {
 
 echo "🔍 Swift pre-commit checks starting..."
 
-# Ensure SwiftFormat is installed
-if ! command_exists swiftformat; then
-  echo "${RED}❌ SwiftFormat is not installed.${RESET}"
-  echo "   Install: https://github.com/nicklockwood/SwiftFormat"
+# Ensure swift-format is installed (ships with Xcode 16 or newer)
+if ! xcrun --find swift-format >/dev/null 2>&1; then
+  echo "${RED}❌ swift-format is not available.${RESET}"
+  echo "   Install Xcode 16 or newer and select it with xcode-select."
   exit 1
 fi
 
@@ -44,12 +44,20 @@ else
 fi
 
 if [[ ${#files[@]} -eq 0 ]]; then
-  echo "${YELLOW}ℹ️  No staged Swift files. Skipping SwiftFormat & SwiftLint.${RESET}"
+  echo "${YELLOW}ℹ️  No staged Swift files. Skipping swift-format & SwiftLint.${RESET}"
   exit 0
 fi
 
-echo "🧹 Running SwiftFormat on staged Swift files..."
-swiftformat "${files[@]}"
+# Formatting rewrites whole files and re-adds them, which would also stage unstaged hunks
+if ! git diff --quiet -- "${files[@]}"; then
+  echo "${RED}❌ Staged Swift files also have unstaged changes:${RESET}"
+  git diff --name-only -- "${files[@]}" | sed 's/^/   /'
+  echo "   Stage or stash the rest, then commit again so the formatter can re-stage whole files."
+  exit 1
+fi
+
+echo "🧹 Running swift-format on staged Swift files..."
+xcrun swift-format format --in-place "${files[@]}"
 
 # Re-add formatted files to the index
 git add "${files[@]}"
@@ -77,5 +85,5 @@ if ((lint_failed)); then
   exit 1
 fi
 
-echo "${GREEN}✅ SwiftFormat & SwiftLint checks passed. Proceeding with commit.${RESET}"
+echo "${GREEN}✅ swift-format & SwiftLint checks passed. Proceeding with commit.${RESET}"
 exit 0

@@ -34,7 +34,7 @@
             window.motionEnded(.motionShake, with: nil)
 
             #expect(window.recorder.endedMotions == [.motionShake])
-            for _ in 0 ..< 40 where shakes == 0 {
+            for _ in 0..<40 where shakes == 0 {
                 try await Task.sleep(nanoseconds: 10_000_000)
             }
             #expect(shakes == 1)

@@ -99,7 +99,8 @@ enum ReportBuilder {
         let destination = directory.appendingPathComponent("\(name).zip")
         var coordinationError: NSError?
         var copyError: Error?
-        NSFileCoordinator().coordinate(readingItemAt: folder, options: [.forUploading], error: &coordinationError) { zipURL in
+        NSFileCoordinator().coordinate(readingItemAt: folder, options: [.forUploading], error: &coordinationError) {
+            zipURL in
             do {
                 try FileManager.default.copyItem(at: zipURL, to: destination)
             } catch {

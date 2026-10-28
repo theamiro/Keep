@@ -13,9 +13,9 @@
         public func updateUIViewController(_: UIViewController, context _: Context) {}
     }
 
-    public extension View {
+    extension View {
         /// Shows the Keep log viewer as a sheet while `isPresented` is true.
-        func keepViewer(isPresented: Binding<Bool>) -> some View {
+        public func keepViewer(isPresented: Binding<Bool>) -> some View {
             sheet(isPresented: isPresented) {
                 KeepView()
             }

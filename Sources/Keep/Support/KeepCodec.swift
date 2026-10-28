@@ -9,7 +9,8 @@ enum KeepCodec {
             var container = encoder.singleValueContainer()
             try container.encode(formatter.string(from: date))
         }
-        encoder.outputFormatting = pretty ? [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes] : [.sortedKeys, .withoutEscapingSlashes]
+        encoder.outputFormatting =
+            pretty ? [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes] : [.sortedKeys, .withoutEscapingSlashes]
         return encoder
     }
 

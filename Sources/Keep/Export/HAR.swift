@@ -4,11 +4,12 @@ import Foundation
 enum HAR {
     static func data(for transactions: [KeepHTTPTransaction], creatorVersion: String) throws -> Data {
         let entries = transactions.sorted { $0.startedAt < $1.startedAt }.map(entry)
-        let root = Root(log: Root.Log(
-            version: "1.2",
-            creator: Root.Creator(name: "Keep", version: creatorVersion),
-            entries: entries
-        ))
+        let root = Root(
+            log: Root.Log(
+                version: "1.2",
+                creator: Root.Creator(name: "Keep", version: creatorVersion),
+                entries: entries
+            ))
         return try KeepCodec.encoder(pretty: true).encode(root)
     }
 
@@ -30,7 +31,8 @@ enum HAR {
                 bodySize: transaction.requestBody?.byteCount ?? 0,
                 postData: transaction.requestBody.map {
                     Entry.Request.PostData(
-                        mimeType: transaction.requestHeaders.first { $0.key.lowercased() == "content-type" }?.value ?? "",
+                        mimeType: transaction.requestHeaders.first { $0.key.lowercased() == "content-type" }?.value
+                            ?? "",
                         text: $0.text
                     )
                 }
