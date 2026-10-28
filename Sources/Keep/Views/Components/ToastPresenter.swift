@@ -1,10 +1,10 @@
 #if canImport(UIKit)
-//
+    //
     //  ToastPresenter.swift
     //  Keep
-//
+    //
     //  Created by Michael Amiro on 25/11/2025.
-//
+    //
 
     import SwiftUI
     import UIKit
@@ -112,13 +112,16 @@
 
             if animated {
                 await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                    UIView.animate(withDuration: self.hideDuration, animations: {
-                        entry.containerView.alpha = 0
-                        entry.containerView.transform = CGAffineTransform(translationX: 0, y: 20)
-                    }, completion: { _ in
-                        removeBlock()
-                        continuation.resume()
-                    })
+                    UIView.animate(
+                        withDuration: self.hideDuration,
+                        animations: {
+                            entry.containerView.alpha = 0
+                            entry.containerView.transform = CGAffineTransform(translationX: 0, y: 20)
+                        },
+                        completion: { _ in
+                            removeBlock()
+                            continuation.resume()
+                        })
                 }
             } else {
                 removeBlock()

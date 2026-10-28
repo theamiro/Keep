@@ -40,13 +40,16 @@ final class FinanceAPIClient {
         self.decoder = decoder
     }
 
+    // swiftlint:disable:next function_body_length
     func fetchTransactions(
         limit: Int = 6,
         completion: @escaping (Result<[Transaction], Error>) -> Void
     ) {
-        guard var components = URLComponents(
-            string: "https://jsonplaceholder.typicode.com/transactions"
-        ) else {
+        guard
+            var components = URLComponents(
+                string: "https://jsonplaceholder.typicode.com/transactions"
+            )
+        else {
             completion(.failure(URLError(.badURL)))
             return
         }
@@ -62,22 +65,28 @@ final class FinanceAPIClient {
         request.addValue(requestID, forHTTPHeaderField: "X-Request-ID")
         request.addValue(authToken, forHTTPHeaderField: "Authorization")
 
-        FinanceLogger.networking.trace("Prepared mocked request", metadata: [
-            "limit": .string(String(limit)),
-            "method": .string(request.httpMethod ?? "GET"),
-            "cache_policy": .string(String(describing: request.cachePolicy)),
-            "authorization_token": .string(authToken)
-        ])
+        FinanceLogger.networking.trace(
+            "Prepared mocked request",
+            metadata: [
+                "limit": .string(String(limit)),
+                "method": .string(request.httpMethod ?? "GET"),
+                "cache_policy": .string(String(describing: request.cachePolicy)),
+                "authorization_token": .string(authToken)
+            ])
 
-        logger.info("Authorization bearer token attached:", metadata: [
-            "token_suffix": .string(String(authToken.suffix(6)))
-        ])
+        logger.info(
+            "Authorization bearer token attached:",
+            metadata: [
+                "token_suffix": .string(String(authToken.suffix(6)))
+            ])
 
-        logger.notice("Starting mocked transaction fetch", metadata: [
-            "url": .string(url.absoluteString),
-            "request_id": .string(requestID),
-            "mocked": .string("true")
-        ])
+        logger.notice(
+            "Starting mocked transaction fetch",
+            metadata: [
+                "url": .string(url.absoluteString),
+                "request_id": .string(requestID),
+                "mocked": .string("true")
+            ])
 
         let start = Date()
         let decoder = self.decoder
@@ -88,63 +97,77 @@ final class FinanceAPIClient {
             let latencyMS = String(format: "%.0f", latency)
 
             if let error {
-                logger.error("Mocked transaction fetch failed", metadata: [
-                    "request_id": .string(requestID),
-                    "latency_ms": .string(latencyMS),
-                    "error": .string(error.localizedDescription)
-                ])
+                logger.error(
+                    "Mocked transaction fetch failed",
+                    metadata: [
+                        "request_id": .string(requestID),
+                        "latency_ms": .string(latencyMS),
+                        "error": .string(error.localizedDescription)
+                    ])
                 DispatchQueue.main.async { completion(.failure(error)) }
                 return
             }
 
             guard let httpResponse = response as? HTTPURLResponse, let data else {
                 let failure = URLError(.badServerResponse)
-                logger.error("Missing mocked response payload", metadata: [
-                    "request_id": .string(requestID),
-                    "latency_ms": .string(latencyMS)
-                ])
+                logger.error(
+                    "Missing mocked response payload",
+                    metadata: [
+                        "request_id": .string(requestID),
+                        "latency_ms": .string(latencyMS)
+                    ])
                 DispatchQueue.main.async { completion(.failure(failure)) }
                 return
             }
 
-            logger.info("Mocked transaction fetch succeeded", metadata: [
-                "request_id": .string(requestID),
-                "status": .string(String(httpResponse.statusCode)),
-                "latency_ms": .string(latencyMS),
-                "content_length": .string(String(data.count))
-            ])
+            logger.info(
+                "Mocked transaction fetch succeeded",
+                metadata: [
+                    "request_id": .string(requestID),
+                    "status": .string(String(httpResponse.statusCode)),
+                    "latency_ms": .string(latencyMS),
+                    "content_length": .string(String(data.count))
+                ])
 
             let previewData = Data(data.prefix(120))
             if let payloadPreview = String(data: previewData, encoding: .utf8) {
-                logger.trace("Mocked payload preview", metadata: [
-                    "request_id": .string(requestID),
-                    "preview": .string(payloadPreview)
-                ])
+                logger.trace(
+                    "Mocked payload preview",
+                    metadata: [
+                        "request_id": .string(requestID),
+                        "preview": .string(payloadPreview)
+                    ])
             }
 
             do {
                 let transactions = try decoder.decode([Transaction].self, from: data)
                 if transactions.count < limit {
-                    logger.warning("Response returned fewer records than requested", metadata: [
-                        "request_id": .string(requestID),
-                        "requested": .string(String(limit)),
-                        "returned": .string(String(transactions.count))
-                    ])
+                    logger.warning(
+                        "Response returned fewer records than requested",
+                        metadata: [
+                            "request_id": .string(requestID),
+                            "requested": .string(String(limit)),
+                            "returned": .string(String(transactions.count))
+                        ])
                 }
                 if let first = transactions.first {
-                    logger.debug("First mocked transaction decoded", metadata: [
-                        "request_id": .string(requestID),
-                        "merchant": .string(first.merchant),
-                        "amount": .string(String(format: "%.2f", first.amount))
-                    ])
+                    logger.debug(
+                        "First mocked transaction decoded",
+                        metadata: [
+                            "request_id": .string(requestID),
+                            "merchant": .string(first.merchant),
+                            "amount": .string(String(format: "%.2f", first.amount))
+                        ])
                 }
                 DispatchQueue.main.async { completion(.success(transactions)) }
             } catch {
-                logger.error("Failed to decode mocked response", metadata: [
-                    "request_id": .string(requestID),
-                    "latency_ms": .string(latencyMS),
-                    "error": .string(error.localizedDescription)
-                ])
+                logger.error(
+                    "Failed to decode mocked response",
+                    metadata: [
+                        "request_id": .string(requestID),
+                        "latency_ms": .string(latencyMS),
+                        "error": .string(error.localizedDescription)
+                    ])
                 DispatchQueue.main.async { completion(.failure(error)) }
             }
         }
@@ -234,7 +257,8 @@ final class FinanceMockURLProtocol: URLProtocol {
             return
         }
 
-        let limit = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+        let limit =
+            URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?
             .first(where: { $0.name == "_limit" })?
             .value
@@ -242,16 +266,20 @@ final class FinanceMockURLProtocol: URLProtocol {
 
         let payload = Array(Self.sampleTransactions.prefix(limit))
 
-        FinanceLogger.networking.debug("Serving mocked payload", metadata: [
-            "limit": .string(String(limit)),
-            "thread": .string(Thread.isMainThread ? "main" : "background")
-        ])
+        FinanceLogger.networking.debug(
+            "Serving mocked payload",
+            metadata: [
+                "limit": .string(String(limit)),
+                "thread": .string(Thread.isMainThread ? "main" : "background")
+            ])
 
         if limit > Self.sampleTransactions.count {
-            FinanceLogger.networking.warning("Requested limit exceeds available mock dataset", metadata: [
-                "requested": .string(String(limit)),
-                "available": .string(String(Self.sampleTransactions.count))
-            ])
+            FinanceLogger.networking.warning(
+                "Requested limit exceeds available mock dataset",
+                metadata: [
+                    "requested": .string(String(limit)),
+                    "available": .string(String(Self.sampleTransactions.count))
+                ])
         }
 
         do {
@@ -264,10 +292,12 @@ final class FinanceMockURLProtocol: URLProtocol {
             )!
 
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.8) { [weak self] in
-                FinanceLogger.networking.trace("Responding with mocked data", metadata: [
-                    "queued_delay_ms": .string("800"),
-                    "limit": .string(String(limit))
-                ])
+                FinanceLogger.networking.trace(
+                    "Responding with mocked data",
+                    metadata: [
+                        "queued_delay_ms": .string("800"),
+                        "limit": .string(String(limit))
+                    ])
                 guard let self else { return }
                 self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
                 self.client?.urlProtocol(self, didLoad: data)

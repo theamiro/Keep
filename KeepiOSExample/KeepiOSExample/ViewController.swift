@@ -134,14 +134,18 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         configureUI()
         renderBalance()
-        FinanceLogger.dashboard.trace("viewDidLoad lifecycle finished", metadata: [
-            "device": .string(UIDevice.current.model),
-            "buttons": .string(String(actionStack.arrangedSubviews.count))
-        ])
-        FinanceLogger.dashboard.notice("Dashboard loaded", metadata: [
-            "auto_logging_interval": .string("\(Constants.autoLoggingInterval)s"),
-            "starting_balance": .string(String(Constants.startingBalance))
-        ])
+        FinanceLogger.dashboard.trace(
+            "viewDidLoad lifecycle finished",
+            metadata: [
+                "device": .string(UIDevice.current.model),
+                "buttons": .string(String(actionStack.arrangedSubviews.count))
+            ])
+        FinanceLogger.dashboard.notice(
+            "Dashboard loaded",
+            metadata: [
+                "auto_logging_interval": .string("\(Constants.autoLoggingInterval)s"),
+                "starting_balance": .string(String(Constants.startingBalance))
+            ])
         startAutoLogging()
     }
 
@@ -150,19 +154,23 @@ class ViewController: UIViewController {
         guard !hasLoggedInitialLayoutMetrics else { return }
         hasLoggedInitialLayoutMetrics = true
         let safeArea = view.safeAreaInsets
-        FinanceLogger.dashboard.debug("Captured initial layout metrics", metadata: [
-            "safe_area_top": .string(String(format: "%.0f", safeArea.top)),
-            "safe_area_bottom": .string(String(format: "%.0f", safeArea.bottom)),
-            "table_height": .string(String(format: "%.0f", tableView.bounds.height))
-        ])
+        FinanceLogger.dashboard.debug(
+            "Captured initial layout metrics",
+            metadata: [
+                "safe_area_top": .string(String(format: "%.0f", safeArea.top)),
+                "safe_area_bottom": .string(String(format: "%.0f", safeArea.bottom)),
+                "table_height": .string(String(format: "%.0f", tableView.bounds.height))
+            ])
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        FinanceLogger.dashboard.debug("Dashboard became visible", metadata: [
-            "animated": .string(String(animated)),
-            "trait_collection": .string(traitCollection.preferredContentSizeCategory.rawValue)
-        ])
+        FinanceLogger.dashboard.debug(
+            "Dashboard became visible",
+            metadata: [
+                "animated": .string(String(animated)),
+                "trait_collection": .string(traitCollection.preferredContentSizeCategory.rawValue)
+            ])
     }
 
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
@@ -170,9 +178,11 @@ class ViewController: UIViewController {
         guard traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) else {
             return
         }
-        FinanceLogger.dashboard.trace("Trait collection color appearance changed", metadata: [
-            "new_style": .string(traitCollection.userInterfaceStyle == .dark ? "dark" : "light")
-        ])
+        FinanceLogger.dashboard.trace(
+            "Trait collection color appearance changed",
+            metadata: [
+                "new_style": .string(traitCollection.userInterfaceStyle == .dark ? "dark" : "light")
+            ])
     }
 
     private func configureUI() {
@@ -186,8 +196,12 @@ class ViewController: UIViewController {
         tableView.delegate = self
 
         for button in [fetchButton, loggingButton, viewLogsButton] {
-            button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-            button.setTitleColor(.label, for: .normal)
+            var configuration = UIButton.Configuration.plain()
+            configuration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+            configuration.baseForegroundColor = .label
+            configuration.background.backgroundColor = button.backgroundColor
+            button.backgroundColor = nil
+            button.configuration = configuration
         }
 
         view.addSubview(accountLabel)
@@ -227,18 +241,22 @@ class ViewController: UIViewController {
 
         statusLabel.text = "Auto logging will record scheduled finance events."
 
-        FinanceLogger.dashboard.debug("Configured dashboard UI hierarchy", metadata: [
-            "view_count": .string(String(view.subviews.count)),
-            "table_style": .string("inset_grouped")
-        ])
+        FinanceLogger.dashboard.debug(
+            "Configured dashboard UI hierarchy",
+            metadata: [
+                "view_count": .string(String(view.subviews.count)),
+                "table_style": .string("inset_grouped")
+            ])
     }
 
     private func renderBalance() {
         let formatted = currencyFormatter.string(from: NSNumber(value: currentBalance)) ?? "$0.00"
         balanceLabel.text = formatted
-        FinanceLogger.dashboard.info("Balance label updated", metadata: [
-            "rendered_balance": .string(formatted)
-        ])
+        FinanceLogger.dashboard.info(
+            "Balance label updated",
+            metadata: [
+                "rendered_balance": .string(formatted)
+            ])
     }
 
     @objc private func fetchTransactionsTapped() {
@@ -254,7 +272,7 @@ class ViewController: UIViewController {
             self.fetchButton.isEnabled = true
 
             switch result {
-            case let .success(transactions):
+            case .success(let transactions):
                 self.transactions = transactions
                 self.hasLoggedEmptyTableState = transactions.isEmpty
                 self.tableView.reloadData()
@@ -263,21 +281,27 @@ class ViewController: UIViewController {
                 self.statusLabel.text = "Loaded \(transactions.count) transactions: \(merchants)."
 
                 let customerToken = "cus_demo_secure_token_\(transactions.first?.id ?? 0)_ledger"
-                FinanceLogger.dashboard.info("Customer ledger token refreshed", metadata: [
-                    "customer_token": .string(customerToken),
-                    "merchant_sample": .string(transactions.first?.merchant ?? "n/a"),
-                    "transaction_count": .string(String(transactions.count))
-                ])
+                FinanceLogger.dashboard.info(
+                    "Customer ledger token refreshed",
+                    metadata: [
+                        "customer_token": .string(customerToken),
+                        "merchant_sample": .string(transactions.first?.merchant ?? "n/a"),
+                        "transaction_count": .string(String(transactions.count))
+                    ])
 
-                FinanceLogger.dashboard.notice("Transactions refreshed", metadata: [
-                    "count": .string(String(transactions.count)),
-                    "net_change": .string(String(format: "%.2f", transactions.reduce(0) { $0 + $1.amount }))
-                ])
-            case let .failure(error):
+                FinanceLogger.dashboard.notice(
+                    "Transactions refreshed",
+                    metadata: [
+                        "count": .string(String(transactions.count)),
+                        "net_change": .string(String(format: "%.2f", transactions.reduce(0) { $0 + $1.amount }))
+                    ])
+            case .failure(let error):
                 self.statusLabel.text = "Failed to refresh: \(error.localizedDescription)"
-                FinanceLogger.dashboard.error("Transaction refresh failed", metadata: [
-                    "error": .string(error.localizedDescription)
-                ])
+                FinanceLogger.dashboard.error(
+                    "Transaction refresh failed",
+                    metadata: [
+                        "error": .string(error.localizedDescription)
+                    ])
             }
         }
     }
@@ -286,9 +310,11 @@ class ViewController: UIViewController {
         let delta = transactions.reduce(0) { $0 + $1.amount }
         currentBalance = Constants.startingBalance + delta
         renderBalance()
-        FinanceLogger.dashboard.debug("Recalculated balance", metadata: [
-            "transaction_delta": .string(String(format: "%.2f", delta))
-        ])
+        FinanceLogger.dashboard.debug(
+            "Recalculated balance",
+            metadata: [
+                "transaction_delta": .string(String(format: "%.2f", delta))
+            ])
     }
 
     @objc private func toggleAutoLoggingTapped() {
@@ -297,18 +323,22 @@ class ViewController: UIViewController {
         } else {
             startAutoLogging()
         }
-        FinanceLogger.dashboard.trace("Toggled auto logging", metadata: [
-            "is_logging_active": .string(String(isLoggingActive))
-        ])
+        FinanceLogger.dashboard.trace(
+            "Toggled auto logging",
+            metadata: [
+                "is_logging_active": .string(String(isLoggingActive))
+            ])
     }
 
     private func startAutoLogging() {
         guard autoLoggingTimer == nil else { return }
         isLoggingActive = true
         loggingButton.setTitle("Stop Auto Logging", for: .normal)
-        FinanceLogger.scheduler.info("Auto logging enabled", metadata: [
-            "interval": .string("\(Constants.autoLoggingInterval)s")
-        ])
+        FinanceLogger.scheduler.info(
+            "Auto logging enabled",
+            metadata: [
+                "interval": .string("\(Constants.autoLoggingInterval)s")
+            ])
         FinanceLogger.scheduler.trace("Preparing scheduler timer")
 
         autoLoggingTimer = Timer.scheduledTimer(
@@ -349,34 +379,46 @@ class ViewController: UIViewController {
         let hangMetadata = Logger.MetadataValue.string(String(format: "%.2f", hangProbability))
         let sessionToken = "sess_demo_finance_autolog_\(String(format: "%03d", autoLogStep))"
 
-        FinanceLogger.scheduler.trace("Heartbeat captured", metadata: [
-            "sequence": .string(String(autoLogStep)),
-            "hang_probability": hangMetadata
-        ])
-        FinanceLogger.scheduler.debug("Scheduler metrics sampled", metadata: [
-            "active_transactions": .string(String(transactions.count)),
-            "balance_snapshot": .string(balanceString)
-        ])
-        FinanceLogger.scheduler.info("Scheduler session token rotated:", metadata: [
-            "session_token": .string(sessionToken),
-            "sequence": .string(String(autoLogStep))
-        ])
-
-        if hangProbability > 0.8 {
-            FinanceLogger.scheduler.critical("Detected elevated hang probability", metadata: [
-                "hang_probability": hangMetadata,
-                "detector": .string("finance.scheduler")
-            ])
-        } else if hangProbability > 0.5 {
-            FinanceLogger.scheduler.warning("Hang trend approaching threshold", metadata: [
+        FinanceLogger.scheduler.trace(
+            "Heartbeat captured",
+            metadata: [
+                "sequence": .string(String(autoLogStep)),
                 "hang_probability": hangMetadata
             ])
+        FinanceLogger.scheduler.debug(
+            "Scheduler metrics sampled",
+            metadata: [
+                "active_transactions": .string(String(transactions.count)),
+                "balance_snapshot": .string(balanceString)
+            ])
+        FinanceLogger.scheduler.info(
+            "Scheduler session token rotated:",
+            metadata: [
+                "session_token": .string(sessionToken),
+                "sequence": .string(String(autoLogStep))
+            ])
+
+        if hangProbability > 0.8 {
+            FinanceLogger.scheduler.critical(
+                "Detected elevated hang probability",
+                metadata: [
+                    "hang_probability": hangMetadata,
+                    "detector": .string("finance.scheduler")
+                ])
+        } else if hangProbability > 0.5 {
+            FinanceLogger.scheduler.warning(
+                "Hang trend approaching threshold",
+                metadata: [
+                    "hang_probability": hangMetadata
+                ])
         }
 
-        FinanceLogger.scheduler.notice("\(message)", metadata: [
-            "balance_snapshot": .string(balanceString),
-            "sequence": .string(String(autoLogStep))
-        ])
+        FinanceLogger.scheduler.notice(
+            "\(message)",
+            metadata: [
+                "balance_snapshot": .string(balanceString),
+                "sequence": .string(String(autoLogStep))
+            ])
 
         statusLabel.text = "Last scheduled log: \(message)."
     }
@@ -392,9 +434,11 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
         if transactions.isEmpty {
             if !hasLoggedEmptyTableState {
                 hasLoggedEmptyTableState = true
-                FinanceLogger.dashboard.warning("Transactions table empty", metadata: [
-                    "has_auto_logging": .string(String(isLoggingActive))
-                ])
+                FinanceLogger.dashboard.warning(
+                    "Transactions table empty",
+                    metadata: [
+                        "has_auto_logging": .string(String(isLoggingActive))
+                    ])
             }
             return 1
         }
@@ -414,8 +458,9 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
         }
 
         let reuseIdentifier = "TransactionCell"
-        let cell = tableView.dequeueReusableCell(withIdentifier: reuseIdentifier) ??
-            UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
+        let cell =
+            tableView.dequeueReusableCell(withIdentifier: reuseIdentifier)
+            ?? UITableViewCell(style: .subtitle, reuseIdentifier: reuseIdentifier)
 
         let transaction = transactions[indexPath.row]
         cell.selectionStyle = .none

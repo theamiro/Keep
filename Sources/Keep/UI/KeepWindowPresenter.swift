@@ -17,10 +17,12 @@
                 ShakeGesture.install { [weak self] scene in self?.showMenu(in: scene) }
             }
             let center = NotificationCenter.default
-            center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) {
+                [weak self] _ in
                 Task { @MainActor in self?.appWillResignActive() }
             }
-            center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) {
+                [weak self] _ in
                 Task { @MainActor in self?.appDidBecomeActive() }
             }
         }
@@ -33,28 +35,33 @@
             open(in: scene)
             let menu = UIAlertController(title: "Keep", message: nil, preferredStyle: .actionSheet)
             if KeepRuntime.shared.current?.previousSnapshot != nil {
-                menu.addAction(UIAlertAction(title: "Share crashed session", style: .default) { [weak self] _ in
-                    Task { @MainActor in self?.shareReport(scope: .crashedSession, closeWhenFinished: true) }
-                })
+                menu.addAction(
+                    UIAlertAction(title: "Share crashed session", style: .default) { [weak self] _ in
+                        Task { @MainActor in self?.shareReport(scope: .crashedSession, closeWhenFinished: true) }
+                    })
             }
-            menu.addAction(UIAlertAction(title: "Share report", style: .default) { [weak self] _ in
-                Task { @MainActor in self?.shareReport(scope: .currentSession, closeWhenFinished: true) }
-            })
-            menu.addAction(UIAlertAction(title: "Log viewer", style: .default) { [weak self] _ in
-                Task { @MainActor in self?.presentViewer() }
-            })
+            menu.addAction(
+                UIAlertAction(title: "Share report", style: .default) { [weak self] _ in
+                    Task { @MainActor in self?.shareReport(scope: .currentSession, closeWhenFinished: true) }
+                })
+            menu.addAction(
+                UIAlertAction(title: "Log viewer", style: .default) { [weak self] _ in
+                    Task { @MainActor in self?.presentViewer() }
+                })
             for tool in KeepRuntime.shared.current?.registeredTools ?? [] {
-                menu.addAction(UIAlertAction(title: tool.title, style: .default) { [weak self] _ in
-                    Task { @MainActor in
-                        // Hide Keep first so the tool presents over the app, not over Keep.
-                        self?.close()
-                        tool.action()
-                    }
-                })
+                menu.addAction(
+                    UIAlertAction(title: tool.title, style: .default) { [weak self] _ in
+                        Task { @MainActor in
+                            // Hide Keep first so the tool presents over the app, not over Keep.
+                            self?.close()
+                            tool.action()
+                        }
+                    })
             }
-            menu.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-                Task { @MainActor in self?.close() }
-            })
+            menu.addAction(
+                UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+                    Task { @MainActor in self?.close() }
+                })
             menu.popoverPresentationController?.sourceView = container.view
             menu.popoverPresentationController?.sourceRect = CGRect(
                 x: container.view.bounds.midX, y: container.view.bounds.midY, width: 1, height: 1

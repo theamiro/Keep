@@ -21,7 +21,8 @@
             let logs = UINavigationController(rootViewController: LogListViewController(core: core))
             logs.tabBarItem = UITabBarItem(title: "Logs", image: UIImage(systemName: "doc.text"), tag: 0)
             let network = UINavigationController(rootViewController: NetworkListViewController(core: core))
-            network.tabBarItem = UITabBarItem(title: "Network", image: UIImage(systemName: "arrow.left.arrow.right"), tag: 1)
+            network.tabBarItem = UITabBarItem(
+                title: "Network", image: UIImage(systemName: "arrow.left.arrow.right"), tag: 1)
             viewControllers = [logs, network]
         }
 
@@ -49,19 +50,10 @@
         override func viewDidLoad() {
             super.viewDidLoad()
             view.backgroundColor = .systemBackground
-            let label = UILabel()
-            label.text = message
-            label.numberOfLines = 0
-            label.textAlignment = .center
-            label.textColor = .secondaryLabel
-            label.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview(label)
-            NSLayoutConstraint.activate([
-                label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-                label.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-                label.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 24),
-                label.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24)
-            ])
+            let emptyState = KeepHostingView(KeepEmptyState(message: message))
+            emptyState.frame = view.bounds
+            emptyState.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            view.addSubview(emptyState)
         }
     }
 
@@ -105,9 +97,10 @@
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-            alert.addAction(UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
-                Task { @MainActor in self?.core.clearSession() }
-            })
+            alert.addAction(
+                UIAlertAction(title: "Clear", style: .destructive) { [weak self] _ in
+                    Task { @MainActor in self?.core.clearSession() }
+                })
             present(alert, animated: true)
         }
     }

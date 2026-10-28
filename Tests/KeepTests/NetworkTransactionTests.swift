@@ -1,6 +1,7 @@
 import Foundation
-@testable import Keep
 import Testing
+
+@testable import Keep
 
 @Suite("Network transactions")
 struct NetworkTransactionTests {
@@ -9,9 +10,10 @@ struct NetworkTransactionTests {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
-        let response = try #require(HTTPURLResponse(
-            url: request.url!, statusCode: 201, httpVersion: nil, headerFields: ["X-Trace": "1"]
-        ))
+        let response = try #require(
+            HTTPURLResponse(
+                url: request.url!, statusCode: 201, httpVersion: nil, headerFields: ["X-Trace": "1"]
+            ))
         return KeepHTTPTransaction(
             label: "URLSession",
             startedAt: Date(timeIntervalSince1970: 1_700_000_000),
@@ -35,7 +37,10 @@ struct NetworkTransactionTests {
 
     @Test func curlCommandReproducesTheRequest() throws {
         let transaction = try makeTransaction()
-        #expect(transaction.curlCommand == #"curl -X POST 'https://api.example.com/v1/items?limit=6' -H 'Content-Type: application/json' --data-binary '{"a":1}'"#)
+        #expect(
+            transaction.curlCommand
+                == #"curl -X POST 'https://api.example.com/v1/items?limit=6' -H 'Content-Type: application/json' --data-binary '{"a":1}'"#
+        )
     }
 
     @Test func singleQuotesAreShellEscaped() {
@@ -57,10 +62,11 @@ struct NetworkTransactionTests {
         let core = try makeCore(directory: makeTemporaryDirectory())
         var request = try URLRequest(url: #require(URL(string: "https://api.example.com/login?token=abc")))
         request.setValue("Bearer live-token-42", forHTTPHeaderField: "Authorization")
-        core.record(KeepHTTPTransaction(
-            label: "URLSession", startedAt: Date(), duration: 0.1, request: request, response: nil,
-            error: URLError(.timedOut)
-        ))
+        core.record(
+            KeepHTTPTransaction(
+                label: "URLSession", startedAt: Date(), duration: 0.1, request: request, response: nil,
+                error: URLError(.timedOut)
+            ))
         core.drainQueue()
 
         let stored = try #require(core.transactions.snapshot().first)
@@ -72,12 +78,15 @@ struct NetworkTransactionTests {
     @Test func errorDescriptionsAreRedactedBeforeTheyAreKept() throws {
         let core = try makeCore(directory: makeTemporaryDirectory())
         let request = try URLRequest(url: #require(URL(string: "https://api.example.com/refresh")))
-        let error = NSError(domain: "Refresh", code: 401, userInfo: [
-            NSLocalizedDescriptionKey: "Refresh failed for jane@example.com with token=abc123"
-        ])
-        core.record(KeepHTTPTransaction(
-            label: "URLSession", startedAt: Date(), duration: 0.1, request: request, response: nil, error: error
-        ))
+        let error = NSError(
+            domain: "Refresh", code: 401,
+            userInfo: [
+                NSLocalizedDescriptionKey: "Refresh failed for jane@example.com with token=abc123"
+            ])
+        core.record(
+            KeepHTTPTransaction(
+                label: "URLSession", startedAt: Date(), duration: 0.1, request: request, response: nil, error: error
+            ))
         core.drainQueue()
 
         let stored = try #require(core.transactions.snapshot().first)
@@ -127,7 +136,7 @@ struct URLProtocolCaptureTests {
         }
 
         var recorded: [KeepHTTPTransaction] = []
-        for _ in 0 ..< 40 where recorded.isEmpty {
+        for _ in 0..<40 where recorded.isEmpty {
             core.drainQueue()
             recorded = core.transactions.snapshot()
             if recorded.isEmpty {

@@ -87,20 +87,21 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
 
     private func recordTransaction(error: Error?) {
         let httpResponse = receivedResponse as? HTTPURLResponse
-        Keep.record(KeepHTTPTransaction(
-            id: UUID().uuidString,
-            label: "URLSession",
-            startedAt: startedAt,
-            duration: Date().timeIntervalSince(startedAt),
-            method: request.httpMethod ?? "GET",
-            url: request.url?.absoluteString ?? "",
-            requestHeaders: request.allHTTPHeaderFields ?? [:],
-            requestBody: request.httpBody.map(KeepBody.init),
-            statusCode: httpResponse?.statusCode,
-            responseHeaders: httpResponse.map { KeepHTTPTransaction.headers(from: $0.allHeaderFields) } ?? [:],
-            responseBody: KeepBody(prefix: receivedBody, totalByteCount: receivedByteCount),
-            errorDescription: error?.localizedDescription
-        ))
+        Keep.record(
+            KeepHTTPTransaction(
+                id: UUID().uuidString,
+                label: "URLSession",
+                startedAt: startedAt,
+                duration: Date().timeIntervalSince(startedAt),
+                method: request.httpMethod ?? "GET",
+                url: request.url?.absoluteString ?? "",
+                requestHeaders: request.allHTTPHeaderFields ?? [:],
+                requestBody: request.httpBody.map(KeepBody.init),
+                statusCode: httpResponse?.statusCode,
+                responseHeaders: httpResponse.map { KeepHTTPTransaction.headers(from: $0.allHeaderFields) } ?? [:],
+                responseBody: KeepBody(prefix: receivedBody, totalByteCount: receivedByteCount),
+                errorDescription: error?.localizedDescription
+            ))
     }
 }
 

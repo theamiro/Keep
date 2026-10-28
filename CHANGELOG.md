@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+### Changed
+
+- Redesigned the log and network lists with compact rows, scope filters and count badges, and replaced plain-text detail screens with structured sections and formatted code blocks.
+- JSON bodies are pretty-printed and syntax-highlighted with Runestone, including JSON embedded in strings. Code blocks support wrapping, copying formatted or raw text, and showing long content.
+- Raised the iOS deployment floor from iOS 13 to iOS 15.
+- The viewer's rows, pills, key-value lists and detail sections are now SwiftUI views hosted in the existing UIKit controllers and table views, with Xcode previews. Nothing changes for apps that use Keep.
+
 ## 0.1.1 (2026-10-28)
 
 ### Fixed

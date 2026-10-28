@@ -10,13 +10,13 @@ public enum JSONValue: Codable, Hashable, Sendable {
 
     init(_ value: Logger.MetadataValue) {
         switch value {
-        case let .string(string):
+        case .string(let string):
             self = .string(string)
-        case let .stringConvertible(convertible):
+        case .stringConvertible(let convertible):
             self = .string(convertible.description)
-        case let .array(array):
+        case .array(let array):
             self = .array(array.map(JSONValue.init))
-        case let .dictionary(dictionary):
+        case .dictionary(let dictionary):
             self = .object(dictionary.mapValues(JSONValue.init))
         @unknown default:
             self = .string(String(describing: value))
@@ -41,19 +41,20 @@ public enum JSONValue: Codable, Hashable, Sendable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
-        case let .string(string): try container.encode(string)
-        case let .array(array): try container.encode(array)
-        case let .object(object): try container.encode(object)
+        case .string(let string): try container.encode(string)
+        case .array(let array): try container.encode(array)
+        case .object(let object): try container.encode(object)
         }
     }
 
     /// A plain-text rendering used for search and the text report.
     var text: String {
         switch self {
-        case let .string(string): return string
-        case let .array(array): return "[" + array.map(\.text).joined(separator: ", ") + "]"
-        case let .object(object):
-            return "{" + object.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value.text)" }.joined(separator: ", ") + "}"
+        case .string(let string): return string
+        case .array(let array): return "[" + array.map(\.text).joined(separator: ", ") + "]"
+        case .object(let object):
+            return "{" + object.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value.text)" }.joined(separator: ", ")
+                + "}"
         }
     }
 }

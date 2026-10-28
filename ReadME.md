@@ -10,6 +10,8 @@
 
 **Keep** is a Chucker-style diagnostics tool for iOS. Testers open it with a shake, see what the app logged and which network requests it made, and share a report through the system share sheet. It captures [swift-log](https://github.com/apple/swift-log) messages and HTTP transactions in memory, redacts sensitive values before they are stored, and is compiled out of production builds.
 
+Keep supports iOS 15 and later.
+
 ## Why Keep?
 
 - **Opens from anywhere.** A shake opens the menu on any screen, including the splash screen, the login screen and over a certificate-failure alert. It runs in its own window, so it does not depend on your navigation.
@@ -78,22 +80,27 @@ Keep.start(configuration)
 
 ### Keep it out of production
 
-Keep is protected at four layers. The first two are what keep it out of the binary. The other two catch mistakes:
+Keep is protected at five layers. The first three keep it out of production builds. The other two catch mistakes:
 
 1. **Compile gate.** Add `KEEP_ENABLED` to `SWIFT_ACTIVE_COMPILATION_CONDITIONS` for Development and UAT configurations only. `Diagnostics.swift` compiles to no-ops without it.
-2. **Link exclusion.** For Pilot and Production configurations, set `EXCLUDED_SOURCE_FILE_NAMES = Keep.o`. Keep's code is then not linked into the binary.
-3. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after the link step. Set `KEEP_FORBIDDEN_CONFIGURATIONS` to a semicolon-separated list of configuration names (default `Release`). The build fails if Keep's code or framework is found, and it fails if the executable cannot be read.
-4. **Runtime kill switch.** `Keep.start` detects how the app was distributed. App Store builds, and builds whose provisioning profile cannot be read, turn Keep off and delete its folder, whatever `allowedDistributions` says.
+2. **Link exclusion.** For Pilot and Production configurations, exclude `Keep.o` and the Runestone/TreeSitter product objects with `EXCLUDED_SOURCE_FILE_NAMES`. The sample project lists the current object names in its Release configuration.
+3. **Resource cleanup.** Run [`Scripts/keep-strip-viewer-resources.sh`](Scripts/keep-strip-viewer-resources.sh) before the verifier for non-debug configurations to remove the Runestone query bundles.
+4. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after linking and resource cleanup. Set `KEEP_FORBIDDEN_CONFIGURATIONS` to a semicolon-separated list of configuration names (default `Release`). The build fails if Keep, Runestone or TreeSitter code or resources are found, and it fails if the executable cannot be read.
+5. **Runtime kill switch.** `Keep.start` detects how the app was distributed. App Store builds, and builds whose provisioning profile cannot be read, turn Keep off and delete its folder, whatever `allowedDistributions` says.
 
-The example app's Release configuration uses layers 2 and 3. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
+The example app's Release configuration uses layers 2–4. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
 
-> **Limit of layer 4.** An Ad Hoc build of a production configuration looks the same as an internal Ad Hoc build at runtime, so the runtime check cannot tell them apart. Layers 1 and 2 are the real guard for those builds.
+> **Limit of layer 5.** An Ad Hoc build of a production configuration looks the same as an internal Ad Hoc build at runtime, so the runtime check cannot tell them apart. Layers 1–4 are the build-time guard for those builds.
 
 ### Open the log viewer
 
 - **Shake** the device on any screen. The shake menu offers *Share report*, *Log viewer*, *Share crashed session* (when there is one) and any tools you registered.
 - **Programmatically**, from a debug menu: `Diagnostics.present()`, which calls `Keep.present()`.
 - **SwiftUI**: `.keepViewer(isPresented:)` shows the viewer as a sheet, using `KeepView`.
+
+The viewer groups pinned logs first and shows compact time, level, source and message rows. Search the logs and filter with **All**, **Info+**, **Warn+** or **Error**. Network rows show the method, status, path, duration and response size; their scope filters are **All**, **2xx**, **4xx**, **5xx** and **Failed**.
+
+Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. **Copy all** copies the complete plain-text detail.
 
 Register your own tools so they appear in the shake menu:
 

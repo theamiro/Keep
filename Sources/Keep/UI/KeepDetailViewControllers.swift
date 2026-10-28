@@ -1,15 +1,13 @@
 #if canImport(UIKit)
+    import SwiftUI
     import UIKit
 
-    /// A monospaced, selectable text screen with Copy and Share. Used for log and network details.
-    class KeepTextViewController: UIViewController, ToastPresentable {
-        let textView = UITextView()
-        let text: String
-        let shareFileName: String?
+    /// A vertically scrolling detail layout with Copy all and Share actions.
+    class KeepDetailViewController: UIViewController, ToastPresentable {
+        let scrollView = UIScrollView()
+        let contentStack = UIStackView()
 
-        init(title: String, text: String, shareFileName: String? = nil) {
-            self.text = text
-            self.shareFileName = shareFileName
+        init(title: String) {
             super.init(nibName: nil, bundle: nil)
             self.title = title
         }
@@ -22,58 +20,217 @@
         override func viewDidLoad() {
             super.viewDidLoad()
             view.backgroundColor = .systemBackground
-            textView.translatesAutoresizingMaskIntoConstraints = false
-            textView.isEditable = false
-            textView.alwaysBounceVertical = true
-            textView.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-            textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 24, right: 12)
-            textView.text = text
-            view.addSubview(textView)
-            NSLayoutConstraint.activate([
-                textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-                textView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-                textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                textView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-            ])
+            configureLayout()
+            configureNavigationItems()
+            buildContent()
+        }
+
+        func configureNavigationItems() {
             navigationItem.rightBarButtonItems = [
                 UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTapped)),
-                UIBarButtonItem(title: "Copy", style: .plain, target: self, action: #selector(copyTapped))
+                UIBarButtonItem(title: "Copy all", style: .plain, target: self, action: #selector(copyAllTapped))
             ]
         }
 
-        @objc private func copyTapped() {
-            copyToPasteboard(text) { [weak self] in
+        func buildContent() {}
+
+        func copyAllText() -> String {
+            ""
+        }
+
+        func shareItems() throws -> [Any] {
+            [copyAllText()]
+        }
+
+        func clearContent() {
+            for view in contentStack.arrangedSubviews {
+                contentStack.removeArrangedSubview(view)
+                view.removeFromSuperview()
+            }
+        }
+
+        /// Adds a section whose content is SwiftUI.
+        func addSection<Content: View>(title: String, @ViewBuilder content: () -> Content) {
+            contentStack.addArrangedSubview(KeepHostingView(KeepDetailSection(title: title, content: content)))
+        }
+
+        /// Adds a section whose content includes UIKit views, such as selectable text.
+        func addSection(title: String, views: [UIView]) {
+            let heading = KeepHostingView(KeepSectionHeading(title: title))
+            let section = UIStackView(arrangedSubviews: [heading] + views)
+            section.axis = .vertical
+            section.alignment = .fill
+            section.spacing = 8
+            contentStack.addArrangedSubview(section)
+        }
+
+        func addCodeBlock(
+            title: String,
+            text: String,
+            rawText: String? = nil,
+            isJSON: Bool = false,
+            byteCount: Int? = nil,
+            prefix: String? = nil
+        ) {
+            var views: [UIView] = []
+            if let prefix, !prefix.isEmpty {
+                views.append(KeepHostingView(CodeBlockPrefix(text: prefix)))
+            }
+            let codeBlock = CodeBlockView(
+                title: title,
+                text: text,
+                rawText: rawText,
+                isJSON: isJSON,
+                byteCount: byteCount
+            )
+            codeBlock.onCopy = { [weak self] in self?.showPopup(message: "Copied to clipboard") }
+            views.append(codeBlock)
+            let blockStack = UIStackView(arrangedSubviews: views)
+            blockStack.axis = .vertical
+            blockStack.spacing = 6
+            contentStack.addArrangedSubview(blockStack)
+        }
+
+        func makeSelectableTextView(_ text: String, font: UIFont, textColor: UIColor = .label) -> UITextView {
+            let textView = UITextView()
+            textView.text = text
+            textView.font = font
+            textView.textColor = textColor
+            textView.backgroundColor = .clear
+            textView.isEditable = false
+            textView.isSelectable = true
+            textView.isScrollEnabled = false
+            textView.textContainerInset = .zero
+            textView.textContainer.lineFragmentPadding = 0
+            textView.setContentCompressionResistancePriority(.required, for: .vertical)
+            let width = max(280, view.bounds.width - 36)
+            let height = textView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude)).height
+            textView.heightAnchor.constraint(equalToConstant: max(font.lineHeight, height)).isActive = true
+            return textView
+        }
+
+        @objc private func copyAllTapped() {
+            copyToPasteboard(copyAllText()) { [weak self] in
                 self?.showPopup(message: "Copied to clipboard")
             }
         }
 
         @objc private func shareTapped() {
-            let items: [Any]
-            if let shareFileName, let url = try? writeTemporaryFile(named: shareFileName) {
-                items = [url]
-            } else {
-                items = [text]
+            do {
+                let activity = try UIActivityViewController(activityItems: shareItems(), applicationActivities: nil)
+                activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItems?.first
+                present(activity, animated: true)
+            } catch {
+                showPopup(message: "Could not prepare share item")
             }
-            let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
-            activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItems?.first
-            present(activity, animated: true)
         }
 
-        private func writeTemporaryFile(named name: String) throws -> URL {
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
-            try text.write(to: url, atomically: true, encoding: .utf8)
-            return url
+        private func configureLayout() {
+            scrollView.translatesAutoresizingMaskIntoConstraints = false
+            contentStack.translatesAutoresizingMaskIntoConstraints = false
+            contentStack.axis = .vertical
+            contentStack.alignment = .fill
+            contentStack.spacing = 18
+
+            view.addSubview(scrollView)
+            scrollView.addSubview(contentStack)
+            NSLayoutConstraint.activate([
+                scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+                scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+                scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+                contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 16),
+                contentStack.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor, constant: 16),
+                contentStack.trailingAnchor.constraint(
+                    equalTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -16
+                ),
+                contentStack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -24)
+            ])
         }
     }
 
-    final class LogDetailViewController: KeepTextViewController {
+    final class LogDetailViewController: KeepDetailViewController {
+        private let entry: LogEntry
+
         init(entry: LogEntry) {
-            super.init(title: "Log", text: Self.describe(entry))
+            self.entry = entry
+            super.init(title: "Log")
         }
 
         @available(*, unavailable)
         required init?(coder _: NSCoder) {
             fatalError("init(coder:) is not supported")
+        }
+
+        override func buildContent() {
+            // The message stays a UITextView so testers can select part of it.
+            let message = makeSelectableTextView(entry.message, font: .preferredFont(forTextStyle: .body))
+            addSection(title: "Message", views: [KeepHostingView(LogDetailHeader(entry: entry)), message])
+
+            let fields = [
+                KeepKeyValue("Source", entry.source),
+                KeepKeyValue("Location", "\(entry.file):\(entry.line) · \(entry.function)"),
+                KeepKeyValue("Label", entry.label),
+                KeepKeyValue("Tag", entry.tag),
+                KeepKeyValue("Pinned", entry.isPinned ? "Yes" : "No")
+            ]
+            addSection(title: "Details") {
+                KeyValueList(rows: fields)
+            }
+
+            for key in entry.metadata.keys.sorted() {
+                guard let value = entry.metadata[key] else { continue }
+                addMetadataSection(key: key, value: value)
+            }
+        }
+
+        override func copyAllText() -> String {
+            Self.describe(entry)
+        }
+
+        private func addMetadataSection(key: String, value: JSONValue) {
+            switch value {
+            case .string(let string):
+                if string.utf8.count >= CodeBlockView.formattingThreshold {
+                    if let candidate = JSONFormatter.embeddedCandidate(string) {
+                        addCodeBlock(
+                            title: key,
+                            text: candidate.json,
+                            rawText: string,
+                            isJSON: true,
+                            byteCount: string.utf8.count,
+                            prefix: candidate.prefix
+                        )
+                    } else {
+                        addCodeBlock(title: key, text: string, rawText: string, byteCount: string.utf8.count)
+                    }
+                    return
+                }
+                if let embedded = JSONFormatter.splitEmbedded(string) {
+                    addCodeBlock(
+                        title: key,
+                        text: embedded.json,
+                        rawText: string,
+                        isJSON: true,
+                        byteCount: string.utf8.count,
+                        prefix: embedded.prefix
+                    )
+                } else if JSONFormatter.format(string) != nil {
+                    addCodeBlock(title: key, text: string, rawText: string, isJSON: true, byteCount: string.utf8.count)
+                } else {
+                    addCodeBlock(title: key, text: string, rawText: string, byteCount: string.utf8.count)
+                }
+            case .object, .array:
+                let encodedData = try? KeepCodec.encoder().encode(value)
+                let encoded = encodedData.flatMap { String(bytes: $0, encoding: .utf8) } ?? value.text
+                addCodeBlock(
+                    title: key,
+                    text: encoded,
+                    rawText: encoded,
+                    isJSON: true,
+                    byteCount: encoded.utf8.count
+                )
+            }
         }
 
         private static func describe(_ entry: LogEntry) -> String {
@@ -96,109 +253,15 @@
         }
     }
 
-    final class NetworkDetailViewController: UIViewController {
-        private let transaction: KeepHTTPTransaction
-        private let segments = UISegmentedControl(items: ["Overview", "Request", "Response"])
-        private let textView = UITextView()
-
-        init(transaction: KeepHTTPTransaction) {
-            self.transaction = transaction
-            super.init(nibName: nil, bundle: nil)
-            title = "\(transaction.method) \(transaction.statusCode.map(String.init) ?? "ERR")"
+    #if DEBUG
+        @available(iOS 17, *)
+        #Preview("Error with JSON metadata") {
+            UINavigationController(rootViewController: LogDetailViewController(entry: PreviewSamples.error))
         }
 
-        @available(*, unavailable)
-        required init?(coder _: NSCoder) {
-            fatalError("init(coder:) is not supported")
+        @available(iOS 17, *)
+        #Preview("Pinned warning") {
+            UINavigationController(rootViewController: LogDetailViewController(entry: PreviewSamples.pinnedWarning))
         }
-
-        override func viewDidLoad() {
-            super.viewDidLoad()
-            view.backgroundColor = .systemBackground
-            segments.selectedSegmentIndex = 0
-            segments.addTarget(self, action: #selector(segmentChanged), for: .valueChanged)
-            navigationItem.titleView = segments
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareHAR)),
-                UIBarButtonItem(title: "cURL", style: .plain, target: self, action: #selector(copyCurl))
-            ]
-
-            textView.translatesAutoresizingMaskIntoConstraints = false
-            textView.isEditable = false
-            textView.alwaysBounceVertical = true
-            textView.font = UIFont.monospacedSystemFont(ofSize: 13, weight: .regular)
-            textView.textContainerInset = UIEdgeInsets(top: 12, left: 12, bottom: 24, right: 12)
-            view.addSubview(textView)
-            NSLayoutConstraint.activate([
-                textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-                textView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-                textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-                textView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
-            ])
-            showSegment()
-        }
-
-        @objc private func segmentChanged() {
-            showSegment()
-        }
-
-        private func showSegment() {
-            switch segments.selectedSegmentIndex {
-            case 1: textView.text = Self.describe(headers: transaction.requestHeaders, body: transaction.requestBody)
-            case 2: textView.text = Self.describe(headers: transaction.responseHeaders, body: transaction.responseBody)
-            default: textView.text = overview()
-            }
-        }
-
-        private func overview() -> String {
-            var lines = [
-                "Method:    \(transaction.method)",
-                "URL:       \(transaction.url)",
-                "Status:    \(transaction.statusCode.map(String.init) ?? "none")",
-                "Duration:  \(Int(transaction.duration * 1000)) ms",
-                "Started:   \(KeepCodec.displayString(for: transaction.startedAt))",
-                "Client:    \(transaction.label)"
-            ]
-            if let error = transaction.errorDescription {
-                lines.append("Error:     \(error)")
-            }
-            return lines.joined(separator: "\n")
-        }
-
-        private static func describe(headers: [String: String], body: KeepBody?) -> String {
-            var lines = headers.sorted { $0.key < $1.key }.map { "\($0.key): \($0.value)" }
-            if lines.isEmpty {
-                lines.append("(no headers)")
-            }
-            lines.append("")
-            guard let body else {
-                lines.append("(no body)")
-                return lines.joined(separator: "\n")
-            }
-            lines.append("BODY (\(body.byteCount) bytes\(body.isTruncated ? ", truncated" : ""))")
-            lines.append(body.text)
-            return lines.joined(separator: "\n")
-        }
-
-        @objc private func copyCurl() {
-            copyToPasteboard(transaction.curlCommand) { [weak self] in
-                self?.showPopup(message: "cURL copied")
-            }
-        }
-
-        @objc private func shareHAR() {
-            do {
-                let data = try HAR.data(for: [transaction], creatorVersion: KeepInfo.version)
-                let url = FileManager.default.temporaryDirectory.appendingPathComponent("keep-request-\(transaction.id.prefix(8)).har")
-                try data.write(to: url)
-                let activity = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-                activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItems?.first
-                present(activity, animated: true)
-            } catch {
-                showPopup(message: "Could not create HAR file")
-            }
-        }
-    }
-
-    extension NetworkDetailViewController: ToastPresentable {}
+    #endif
 #endif
