@@ -100,7 +100,7 @@ The example app's Release configuration uses layers 2–4. Its Debug configurati
 
 The viewer groups pinned logs first and shows compact time, level, source and message rows. Search the logs and filter with **All**, **Info+**, **Warn+** or **Error**. Network rows show the method, status, path, duration and response size; their scope filters are **All**, **2xx**, **4xx**, **5xx** and **Failed**.
 
-Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. **Copy all** copies the complete plain-text detail.
+Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. The **Share** button on a detail opens a menu. **Copy all** copies the complete plain-text detail, and **Share text** shares that text. Log details also offer **Share as file**. Network details offer **Copy cURL**, **Copy all**, **Share cURL** and **Share HAR file**. Shared files are removed when the share sheet closes.
 
 Register your own tools so they appear in the shake menu:
 

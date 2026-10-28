@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+### Changed
+
+- Detail screens have one Share button that opens a menu. Log details offer Copy all, Share text and Share as file. Network details offer Copy cURL, Copy all, Share cURL and Share HAR file. Shared files are removed when the share sheet closes.
+- The viewer's tab bar is hidden while a log or network detail is open.
+
+### Fixed
+
+- The back button on a detail screen shows only the chevron, not the title of the list it came from.
+
 ## 0.2.0 (2026-10-28)
 
 ### Changed

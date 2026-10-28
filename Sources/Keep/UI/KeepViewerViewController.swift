@@ -73,6 +73,8 @@
 
         override func viewDidLoad() {
             super.viewDidLoad()
+            // Pushed details show only the chevron as their back button, not this screen's title.
+            navigationItem.backButtonDisplayMode = .minimal
             navigationItem.leftBarButtonItem = UIBarButtonItem(
                 barButtonSystemItem: .done, target: self, action: #selector(doneTapped)
             )

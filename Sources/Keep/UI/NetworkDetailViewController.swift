@@ -20,13 +20,7 @@
             segments.selectedSegmentIndex = 0
             segments.addTarget(self, action: #selector(segmentChanged), for: .valueChanged)
             navigationItem.titleView = segments
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTappedFromSubclass)),
-                UIBarButtonItem(
-                    title: "Copy all", style: .plain, target: self, action: #selector(copyAllTappedFromSubclass)
-                ),
-                UIBarButtonItem(title: "cURL", style: .plain, target: self, action: #selector(copyCurl))
-            ]
+            super.configureNavigationItems()
         }
 
         override func buildContent() {
@@ -49,32 +43,27 @@
             return [url]
         }
 
+        override func shareMenuActions() -> [UIAlertAction] {
+            [
+                shareMenuAction("Copy cURL") { [weak self] in self?.copyCurl() },
+                shareMenuAction("Copy all") { [weak self] in self?.copyAllToPasteboard() },
+                shareMenuAction("Share HAR file") { [weak self] in self?.presentShareItems() },
+                shareMenuAction("Share cURL") { [weak self] in self?.shareCurl() }
+            ]
+        }
+
         @objc private func segmentChanged() {
             renderSegment()
         }
 
-        @objc private func copyCurl() {
+        private func copyCurl() {
             copyToPasteboard(transaction.curlCommand) { [weak self] in
                 self?.showPopup(message: "cURL copied")
             }
         }
 
-        @objc private func shareTappedFromSubclass() {
-            do {
-                let activity = try UIActivityViewController(
-                    activityItems: shareItems(), applicationActivities: nil
-                )
-                activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItems?.first
-                present(activity, animated: true)
-            } catch {
-                showPopup(message: "Could not prepare HAR file")
-            }
-        }
-
-        @objc private func copyAllTappedFromSubclass() {
-            copyToPasteboard(copyAllText()) { [weak self] in
-                self?.showPopup(message: "Copied to clipboard")
-            }
+        private func shareCurl() {
+            presentActivity(items: [transaction.curlCommand])
         }
 
         private func renderSegment() {
