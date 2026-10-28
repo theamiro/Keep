@@ -55,7 +55,7 @@ The hook stops if a staged Swift file also has unstaged changes, because formatt
 
 ## Releases
 
-`main` is the release branch. Every merge into it publishes a release: CI rebuilds and tests the merged commit, tags it `vX.Y.Z` and creates a GitHub release from the top entry of `CHANGELOG.md`. Releases are minor versions unless the PR has a `release:patch` or `release:major` label. To cut a release, date the top entry (`## X.Y.Z (YYYY-MM-DD)`) and open a PR from `develop` into `main`. The PR check fails if the entry is undated or does not name the expected version.
+`main` is the release branch. Every merge into it publishes a release: CI rebuilds and tests the merged commit, tags it `vX.Y.Z` and creates a GitHub release from the top entry of `CHANGELOG.md`. The version follows the change: a top entry with only `### Fixed` or `### Security` headings is a patch, any other allowed heading is a minor, and only the `release:major` label makes a major (`docs/adr/0004-semver-bump-from-changelog.md`). To cut a release, date the top entry (`## X.Y.Z (YYYY-MM-DD)`) and open a PR from `develop` into `main`. The PR check fails if the entry is undated, the head is not `develop`, or the entry does not name the expected version.
 
 ## Reporting Bugs
 

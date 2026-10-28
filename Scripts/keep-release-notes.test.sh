@@ -68,6 +68,106 @@ chmod 000 "$work/unreadable.md"
 check "unreadable changelog fails closed" 1 "" version "$work/unreadable.md"
 chmod 644 "$work/unreadable.md"
 
+cat > "$work/fixed.md" <<'EOF'
+# Changelog
+
+## 0.2.1 (unreleased)
+
+### Fixed
+
+- A bug.
+
+## 0.2.0 (2026-10-28)
+
+### Added
+
+- Older thing.
+EOF
+check "bump of fixed-only unreleased entry is patch" 0 "patch" bump "$work/fixed.md"
+check "bump of a dated entry" 0 "minor" bump "$work/released.md"
+check "pending prints the unreleased version" 0 "0.2.1" pending "$work/fixed.md"
+check "pending fails for a dated entry" 1 "" pending "$work/released.md"
+check "version fails for an unreleased entry" 1 "" version "$work/fixed.md"
+
+cat > "$work/mixed.md" <<'EOF'
+# Changelog
+
+## 0.2.1 (unreleased)
+
+### Fixed
+
+- A bug.
+
+### Added
+
+- A thing.
+EOF
+check "bump of fixed and added is minor" 0 "minor" bump "$work/mixed.md"
+
+cat > "$work/security.md" <<'EOF'
+# Changelog
+
+## 0.2.1 (unreleased)
+
+### Security
+
+- Stopped a leak.
+
+### Fixed
+
+- A bug.
+EOF
+check "bump of security and fixed is patch" 0 "patch" bump "$work/security.md"
+
+cat > "$work/breaking.md" <<'EOF'
+# Changelog
+
+## 0.3.0 (unreleased)
+
+### Breaking changes
+
+- Renamed a call.
+EOF
+check "bump of breaking changes is minor before 1.0" 0 "minor" bump "$work/breaking.md"
+
+cat > "$work/removed.md" <<'EOF'
+# Changelog
+
+## 0.2.1 (unreleased)
+
+### Removed
+
+- An old call.
+EOF
+check "bump of removed is minor" 0 "minor" bump "$work/removed.md"
+
+cat > "$work/unknown-heading.md" <<'EOF'
+# Changelog
+
+## 0.2.1 (unreleased)
+
+### Fixed
+
+- A bug.
+
+### Notes
+
+- Something else.
+EOF
+check "bump with an unknown heading fails" 1 "" bump "$work/unknown-heading.md"
+
+printf '# Changelog\n\n## 0.2.1 (unreleased)\n\n###Fixed\n\n- A bug.\n' > "$work/no-space.md"
+check "bump with a heading missing its space fails" 1 "" bump "$work/no-space.md"
+
+printf '# Changelog\n\n## 0.2.1 (unreleased)\n\n- A bug, with no heading.\n' > "$work/no-headings.md"
+check "bump with no headings fails" 1 "" bump "$work/no-headings.md"
+
+check "bump with no entries fails" 1 "" bump "$work/none.md"
+check "bump with a missing changelog fails closed" 1 "" bump "$work/missing.md"
+
+printf '# Changelog\n\n## 0.2.1 (unpublished)\n\n### Fixed\n\n- A bug.\n' > "$work/bad-status.md"
+check "bump with an unknown entry status fails" 1 "" bump "$work/bad-status.md"
+
 check "unknown mode fails" 1 "" publish "$work/released.md"
 
 check "next minor resets patch" 0 "1.3.0" next minor 1.2.4
