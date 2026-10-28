@@ -28,7 +28,7 @@ Add Keep to your package manifest and pin a released version. Releases are tagge
 dependencies: [
     .package(
         url: "https://github.com/theamiro/Keep.git",
-        from: "0.1.0"
+        from: "0.1.1"
     )
 ]
 ```
