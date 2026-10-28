@@ -2,7 +2,7 @@
     import SwiftUI
     import UIKit
 
-    /// A vertically scrolling detail layout with Copy all and Share actions.
+    /// A vertically scrolling detail layout. Its Share button opens a menu built from `shareMenuActions()`.
     class KeepDetailViewController: UIViewController, ToastPresentable {
         let scrollView = UIScrollView()
         let contentStack = UIStackView()
@@ -10,6 +10,8 @@
         init(title: String) {
             super.init(nibName: nil, bundle: nil)
             self.title = title
+            // Keep the viewer's tab bar out of the way while a detail is open.
+            hidesBottomBarWhenPushed = true
         }
 
         @available(*, unavailable)
@@ -26,10 +28,9 @@
         }
 
         func configureNavigationItems() {
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTapped)),
-                UIBarButtonItem(title: "Copy all", style: .plain, target: self, action: #selector(copyAllTapped))
-            ]
+            navigationItem.rightBarButtonItem = UIBarButtonItem(
+                barButtonSystemItem: .action, target: self, action: #selector(shareTapped)
+            )
         }
 
         func buildContent() {}
@@ -40,6 +41,49 @@
 
         func shareItems() throws -> [Any] {
             [copyAllText()]
+        }
+
+        /// The actions in the Share menu. Subclasses override this to add or replace actions.
+        func shareMenuActions() -> [UIAlertAction] {
+            [
+                shareMenuAction("Copy all") { [weak self] in self?.copyAllToPasteboard() },
+                shareMenuAction("Share text") { [weak self] in self?.presentShareItems() }
+            ]
+        }
+
+        /// A Share menu action. Its handler runs on the main actor, as the other UIKit handlers do.
+        func shareMenuAction(_ title: String, handler: @escaping @MainActor @Sendable () -> Void) -> UIAlertAction {
+            UIAlertAction(title: title, style: .default) { _ in
+                Task { @MainActor in handler() }
+            }
+        }
+
+        /// Shows the share sheet for `shareItems()`, or a popup when the items cannot be prepared.
+        func presentShareItems() {
+            do {
+                presentActivity(items: try shareItems())
+            } catch {
+                showPopup(message: "Could not prepare share item")
+            }
+        }
+
+        /// Shows the system share sheet. File URLs in `items` are removed when the sheet closes, so shared
+        /// files do not stay on disk. Keep passes only files it wrote to the temporary directory.
+        func presentActivity(items: [Any]) {
+            let activity = UIActivityViewController(activityItems: items, applicationActivities: nil)
+            activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItem
+            activity.completionWithItemsHandler = { _, _, _, _ in
+                for case let url as URL in items where url.isFileURL {
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+            present(activity, animated: true)
+        }
+
+        func copyAllToPasteboard() {
+            copyToPasteboard(copyAllText()) { [weak self] in
+                self?.showPopup(message: "Copied to clipboard")
+            }
         }
 
         func clearContent() {
@@ -109,20 +153,12 @@
             return textView
         }
 
-        @objc private func copyAllTapped() {
-            copyToPasteboard(copyAllText()) { [weak self] in
-                self?.showPopup(message: "Copied to clipboard")
-            }
-        }
-
         @objc private func shareTapped() {
-            do {
-                let activity = try UIActivityViewController(activityItems: shareItems(), applicationActivities: nil)
-                activity.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItems?.first
-                present(activity, animated: true)
-            } catch {
-                showPopup(message: "Could not prepare share item")
-            }
+            let menu = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+            shareMenuActions().forEach(menu.addAction)
+            menu.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+            menu.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItem
+            present(menu, animated: true)
         }
 
         private func configureLayout() {
@@ -186,6 +222,24 @@
 
         override func copyAllText() -> String {
             Self.describe(entry)
+        }
+
+        override func shareMenuActions() -> [UIAlertAction] {
+            super.shareMenuActions() + [
+                shareMenuAction("Share as file") { [weak self] in self?.presentLogFile() }
+            ]
+        }
+
+        /// Writes the log to a text file in the temporary directory and shares it.
+        private func presentLogFile() {
+            let directory = FileManager.default.temporaryDirectory
+            let url = directory.appendingPathComponent("keep-log-\(entry.id.prefix(8)).txt")
+            do {
+                try copyAllText().write(to: url, atomically: true, encoding: .utf8)
+                presentActivity(items: [url])
+            } catch {
+                showPopup(message: "Could not prepare log file")
+            }
         }
 
         private func addMetadataSection(key: String, value: JSONValue) {
