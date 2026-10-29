@@ -38,6 +38,9 @@ let package = Package(
             swiftSettings: [
                 .define("KEEP_RUNESTONE", .when(configuration: .debug))
             ]),
+        // Decrypts password-encrypted shares on a Mac: `swift run keep-decrypt <file.keep>`. Not a product, so apps
+        // cannot link it.
+        .executableTarget(name: "keep-decrypt", dependencies: ["Keep"]),
         .testTarget(name: "KeepTests", dependencies: ["Keep"])
     ]
 )

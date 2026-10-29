@@ -59,12 +59,20 @@ public enum Keep {
     }
 
     /// Builds a report for `scope` and returns the URL of the zip archive. Runs off the main thread.
-    public static func exportReport(scope: KeepExportScope = .currentSession, note: String? = nil) async throws -> URL {
+    ///
+    /// With a `password`, returns `<archive>.zip.keep` instead, encrypted with `KeepFileEncryption`, and removes
+    /// the unencrypted zip. `KeepConfiguration.sharing` does not apply here, because the app calls this, not the
+    /// tester.
+    public static func exportReport(
+        scope: KeepExportScope = .currentSession,
+        note: String? = nil,
+        password: String? = nil
+    ) async throws -> URL {
         guard let core = KeepRuntime.shared.current, core.isEnabled else {
             throw KeepError.disabled
         }
         let input = try core.reportInput(for: scope, note: note)
-        return try ReportBuilder.archive(input)
+        return try ReportBuilder.archive(input, password: password)
     }
 
     #if canImport(UIKit)

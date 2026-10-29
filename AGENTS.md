@@ -29,7 +29,8 @@ These protect the reason Keep exists. Do not change them without an ADR in `docs
 | `Sources/Keep/Storage/` | `MemoryBuffer`, encrypted `CrashSnapshot`, Keychain key |
 | `Sources/Keep/Model/` | `LogEntry`, `JSONValue`, `KeepTagRule` |
 | `Sources/Keep/Network/` | `KeepHTTPTransaction` (cURL output) and the opt-in `KeepURLProtocol` |
-| `Sources/Keep/Export/` | `ReportBuilder`, HAR output, `DeviceContext` |
+| `Sources/Keep/Export/` | `ReportBuilder`, HAR output, `DeviceContext`, `KeepFileEncryption` (password-encrypted shares) |
+| `Sources/keep-decrypt/` | macOS command that decrypts `.keep` files. An executable target, not a product |
 | `Sources/Keep/Crash/CrashCapture.swift` | Uncaught-exception handler and MetricKit (iOS 14+) |
 | `Sources/Keep/UI/` | Viewer controllers (UIKit), shake menu and Keep's window. `KeepHosting.swift` hosts SwiftUI in cells and stacks. Wrapped in `#if canImport(UIKit)` |
 | `Sources/Keep/UI/Components/` | SwiftUI views for rows, pills, key-value lists and detail sections, each with a `#Preview`. The Runestone `CodeBlockView` stays UIKit |

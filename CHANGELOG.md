@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 (unreleased)
+
+### Added
+
+- `KeepConfiguration.accentColor` tints Keep's window, viewer, alerts, share sheet, swipe actions and SwiftUI views. `nil` keeps the system blue, or the host's tint in a viewer embedded with `Keep.makeViewer()`.
+- `KeepConfiguration.sharing` decides what testers may send through the share sheet: `.allowed` (the default, as before), `.encryptedOnly` or `.disabled`. Copy actions such as Copy all and Copy cURL are available in every mode. With `.disabled` the Share report items, the lists' share buttons and the details' share actions are removed, and a detail's button becomes a copy menu.
+- Password-encrypted shares. With `.encryptedOnly` the tester types a password (at least 8 characters, entered twice) for every share, and Keep shares `<file>.keep`, encrypted with AES-256-GCM and a PBKDF2-SHA256 key. Share text and Share cURL are not offered. Decrypt on a Mac with `swift run keep-decrypt <file.keep>` from the Keep repository, or with `KeepFileEncryption.decrypt(_:password:)`.
+- `Keep.exportReport(scope:note:password:)` returns an encrypted report when given a password.
+
+### Changed
+
+- The report zip is removed from the temporary directory when the share sheet closes, as detail files already were.
+
 ## 0.3.0 (2026-10-28)
 
 ### Changed

@@ -42,6 +42,16 @@
     }
 
     enum KeepTheme {
+        /// The app's accent from `KeepConfiguration.accentColor`, or nil to inherit the surrounding tint.
+        @MainActor static var configuredAccent: UIColor? {
+            KeepRuntime.shared.current?.configuration.accentColor
+        }
+
+        /// The accent for places that cannot inherit a tint, such as swipe actions and text selection.
+        @MainActor static var accent: UIColor {
+            configuredAccent ?? .systemBlue
+        }
+
         /// Time of day on list rows, to the millisecond.
         @MainActor static let rowTimeFormatter: DateFormatter = {
             let formatter = DateFormatter()
@@ -110,9 +120,10 @@
             let pageGuideHairlineColor = UIColor.separator
             let pageGuideBackgroundColor = UIColor.clear
             let markedTextBackgroundColor = UIColor.systemYellow.withAlphaComponent(0.2)
-            let selectionColor = UIColor.systemBlue.withAlphaComponent(0.25)
+            let selectionColor: UIColor
 
-            init() {
+            @MainActor init() {
+                selectionColor = KeepTheme.accent.withAlphaComponent(0.25)
                 font = KeepTheme.codeFont()
                 lineNumberFont = KeepTheme.codeFont()
             }

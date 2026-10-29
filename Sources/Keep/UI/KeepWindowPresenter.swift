@@ -34,16 +34,19 @@
             guard !isOpen, Keep.isEnabled else { return }
             open(in: scene)
             let menu = UIAlertController(title: "Keep", message: nil, preferredStyle: .actionSheet)
-            if KeepRuntime.shared.current?.previousSnapshot != nil {
+            let canShare = KeepRuntime.shared.current?.configuration.sharing.allowsShareSheet ?? false
+            if canShare, KeepRuntime.shared.current?.previousSnapshot != nil {
                 menu.addAction(
                     UIAlertAction(title: "Share crashed session", style: .default) { [weak self] _ in
                         Task { @MainActor in self?.shareReport(scope: .crashedSession, closeWhenFinished: true) }
                     })
             }
-            menu.addAction(
-                UIAlertAction(title: "Share report", style: .default) { [weak self] _ in
-                    Task { @MainActor in self?.shareReport(scope: .currentSession, closeWhenFinished: true) }
-                })
+            if canShare {
+                menu.addAction(
+                    UIAlertAction(title: "Share report", style: .default) { [weak self] _ in
+                        Task { @MainActor in self?.shareReport(scope: .currentSession, closeWhenFinished: true) }
+                    })
+            }
             menu.addAction(
                 UIAlertAction(title: "Log viewer", style: .default) { [weak self] _ in
                     Task { @MainActor in self?.presentViewer() }
@@ -144,6 +147,8 @@
             let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow(frame: UIScreen.main.bounds)
             window.windowLevel = .alert + 1
             window.backgroundColor = .clear
+            // Alerts, the share sheet and the viewer inherit the window's tint.
+            window.tintColor = KeepTheme.configuredAccent
             window.rootViewController = container
             return window
         }

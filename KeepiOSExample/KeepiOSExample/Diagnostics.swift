@@ -20,6 +20,8 @@ enum Diagnostics {
         #if KEEP_ENABLED
             var configuration = KeepConfiguration()
             configuration.minimumLevel = .trace
+            // configuration.accentColor = UIColor(named: "AccentColor")
+            // configuration.sharing = .encryptedOnly  // or .disabled to allow copying only
             Keep.start(configuration)
         #endif
     }
