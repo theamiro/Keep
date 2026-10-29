@@ -2,7 +2,32 @@
     import SwiftUI
     import UIKit
 
-    /// A vertically scrolling detail layout. Its Share button opens a menu built from `shareMenuActions()`.
+    /// An entry in a detail's Share menu. The kind decides whether `KeepConfiguration.sharing` allows it, and how a
+    /// file is shared.
+    struct KeepDetailAction {
+        enum Kind {
+            /// Copies to the pasteboard. Always allowed.
+            case copy(@MainActor @Sendable () -> Void)
+            /// Shares text through the share sheet. Only when unencrypted sharing is allowed.
+            case shareText(@MainActor @Sendable () -> String)
+            /// Shares a file through the share sheet, encrypted when the configuration requires it.
+            case shareFile(name: String, contents: @MainActor @Sendable () throws -> Data)
+        }
+
+        let title: String
+        let kind: Kind
+
+        func isAllowed(by sharing: KeepSharing) -> Bool {
+            switch kind {
+            case .copy: return true
+            case .shareText: return sharing.allowsUnencrypted
+            case .shareFile: return sharing.allowsShareSheet
+            }
+        }
+    }
+
+    /// A vertically scrolling detail layout. Its Share button opens a menu built from `detailActions()`, without
+    /// the actions `KeepConfiguration.sharing` does not allow.
     class KeepDetailViewController: UIViewController, ToastPresentable {
         let scrollView = UIScrollView()
         let contentStack = UIStackView()
@@ -27,10 +52,22 @@
             buildContent()
         }
 
+        var sharing: KeepSharing {
+            KeepRuntime.shared.current?.configuration.sharing ?? .disabled
+        }
+
         func configureNavigationItems() {
-            navigationItem.rightBarButtonItem = UIBarButtonItem(
-                barButtonSystemItem: .action, target: self, action: #selector(shareTapped)
-            )
+            // Without the share sheet the menu only copies, so the button shows a copy icon instead.
+            navigationItem.rightBarButtonItem =
+                sharing.allowsShareSheet
+                ? UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTapped))
+                : UIBarButtonItem(
+                    image: UIImage(systemName: "doc.on.doc"),
+                    style: .plain,
+                    target: self,
+                    action: #selector(shareTapped)
+                )
+            navigationItem.rightBarButtonItem?.accessibilityLabel = sharing.allowsShareSheet ? "Share" : "Copy"
         }
 
         func buildContent() {}
@@ -39,32 +76,56 @@
             ""
         }
 
-        func shareItems() throws -> [Any] {
-            [copyAllText()]
-        }
-
         /// The actions in the Share menu. Subclasses override this to add or replace actions.
-        func shareMenuActions() -> [UIAlertAction] {
+        func detailActions() -> [KeepDetailAction] {
             [
-                shareMenuAction("Copy all") { [weak self] in self?.copyAllToPasteboard() },
-                shareMenuAction("Share text") { [weak self] in self?.presentShareItems() }
+                KeepDetailAction(title: "Copy all", kind: .copy { [weak self] in self?.copyAllToPasteboard() }),
+                KeepDetailAction(title: "Share text", kind: .shareText { [weak self] in self?.copyAllText() ?? "" })
             ]
         }
 
-        /// A Share menu action. Its handler runs on the main actor, as the other UIKit handlers do.
-        func shareMenuAction(_ title: String, handler: @escaping @MainActor @Sendable () -> Void) -> UIAlertAction {
-            UIAlertAction(title: title, style: .default) { _ in
-                Task { @MainActor in handler() }
+        private func run(_ action: KeepDetailAction) {
+            switch action.kind {
+            case .copy(let copy):
+                copy()
+            case .shareText(let text):
+                presentActivity(items: [text()])
+            case .shareFile(let name, let contents):
+                do {
+                    let data = try contents()
+                    if sharing.requiresPassword {
+                        askPasswordAndShare(data, fileName: name)
+                    } else {
+                        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+                        try data.write(to: url, options: .atomic)
+                        presentActivity(items: [url])
+                    }
+                } catch {
+                    showPopup(message: "Could not prepare file")
+                }
             }
         }
 
-        /// Shows the share sheet for `shareItems()`, or a popup when the items cannot be prepared.
-        func presentShareItems() {
-            do {
-                presentActivity(items: try shareItems())
-            } catch {
-                showPopup(message: "Could not prepare share item")
+        /// Asks for a password, then shares `data` as an encrypted `<fileName>.keep`. Only the encrypted file is
+        /// written.
+        private func askPasswordAndShare(_ data: Data, fileName: String) {
+            let prompt = KeepSharePrompt.make(
+                title: "Encrypt file",
+                message: "Choose a password. Whoever receives the file needs it to open it.",
+                asksForNote: false,
+                asksForPassword: true
+            ) { [weak self] _, password in
+                guard let password else { return }
+                do {
+                    let url = try await Task.detached(priority: .userInitiated) {
+                        try KeepFileEncryption.writeEncryptedFile(data, fileName: fileName, password: password)
+                    }.value
+                    self?.presentActivity(items: [url])
+                } catch {
+                    self?.showPopup(message: "Could not encrypt file")
+                }
             }
+            present(prompt, animated: true)
         }
 
         /// Shows the system share sheet. File URLs in `items` are removed when the sheet closes, so shared
@@ -155,7 +216,12 @@
 
         @objc private func shareTapped() {
             let menu = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-            shareMenuActions().forEach(menu.addAction)
+            for action in detailActions() where action.isAllowed(by: sharing) {
+                menu.addAction(
+                    UIAlertAction(title: action.title, style: .default) { [weak self] _ in
+                        Task { @MainActor in self?.run(action) }
+                    })
+            }
             menu.addAction(UIAlertAction(title: "Cancel", style: .cancel))
             menu.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItem
             present(menu, animated: true)
@@ -224,22 +290,14 @@
             Self.describe(entry)
         }
 
-        override func shareMenuActions() -> [UIAlertAction] {
-            super.shareMenuActions() + [
-                shareMenuAction("Share as file") { [weak self] in self?.presentLogFile() }
+        override func detailActions() -> [KeepDetailAction] {
+            let text = copyAllText()
+            return super.detailActions() + [
+                KeepDetailAction(
+                    title: "Share as file",
+                    kind: .shareFile(name: "keep-log-\(entry.id.prefix(8)).txt") { Data(text.utf8) }
+                )
             ]
-        }
-
-        /// Writes the log to a text file in the temporary directory and shares it.
-        private func presentLogFile() {
-            let directory = FileManager.default.temporaryDirectory
-            let url = directory.appendingPathComponent("keep-log-\(entry.id.prefix(8)).txt")
-            do {
-                try copyAllText().write(to: url, atomically: true, encoding: .utf8)
-                presentActivity(items: [url])
-            } catch {
-                showPopup(message: "Could not prepare log file")
-            }
         }
 
         private func addMetadataSection(key: String, value: JSONValue) {

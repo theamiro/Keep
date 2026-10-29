@@ -14,6 +14,10 @@
 
         override func viewDidLoad() {
             super.viewDidLoad()
+            if let accent = KeepTheme.configuredAccent {
+                // Also applies when the app embeds the viewer from `Keep.makeViewer()` in its own window.
+                view.tintColor = accent
+            }
             guard let core = KeepRuntime.shared.current, core.isEnabled else {
                 viewControllers = [KeepPlaceholderViewController(message: "Keep is not running in this build.")]
                 return
@@ -57,7 +61,7 @@
         }
     }
 
-    /// Shared navigation items for the two list screens: Done, Share and Clear.
+    /// Shared navigation items for the two list screens: Done, Share (unless sharing is disabled) and Clear.
     class KeepListViewController: UITableViewController {
         let core: KeepCore
 
@@ -78,10 +82,11 @@
             navigationItem.leftBarButtonItem = UIBarButtonItem(
                 barButtonSystemItem: .done, target: self, action: #selector(doneTapped)
             )
-            navigationItem.rightBarButtonItems = [
-                UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTapped)),
-                UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(clearTapped))
-            ]
+            let clear = UIBarButtonItem(barButtonSystemItem: .trash, target: self, action: #selector(clearTapped))
+            navigationItem.rightBarButtonItems =
+                core.configuration.sharing.allowsShareSheet
+                ? [UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareTapped)), clear]
+                : [clear]
         }
 
         @objc func doneTapped() {

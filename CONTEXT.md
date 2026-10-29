@@ -58,6 +58,14 @@ _Avoid_: debug log, console, FileLogViewController
 A shareable archive of a session, together with device and app context and an optional note, that the tester sends through the system share sheet to a destination of their choice.
 _Avoid_: export, dump, log file
 
+**Sharing mode**:
+The app's choice of what testers may send through the share sheet: anything, encrypted files only, or nothing. Copying to the clipboard is allowed in every mode.
+_Avoid_: share policy, export setting
+
+**Encrypted file**:
+A report or detail file locked with a password the tester chooses when sharing. Whoever receives it needs that password, passed on separately, to open it.
+_Avoid_: protected report, secure export
+
 **Note**:
 The tester's own free-text description of what went wrong, included in a report.
 _Avoid_: comment, description
