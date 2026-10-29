@@ -97,8 +97,8 @@ struct FileEncryptionTests {
             #expect(zipName.hasPrefix("Keep-Eazy-1.2(45)-") && zipName.hasSuffix(".zip"))
             // Only the encrypted file is left in the report's working directory.
             let directory = encrypted.deletingLastPathComponent()
-            #expect(
-                try FileManager.default.contentsOfDirectory(atPath: directory.path) == [encrypted.lastPathComponent])
+            let remaining = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+            #expect(remaining == [encrypted.lastPathComponent])
             let file = try KeepFileEncryption.decrypt(Data(contentsOf: encrypted), password: password)
             #expect(file.fileName == zipName)
             #expect(file.contents.starts(with: [0x50, 0x4B, 0x03, 0x04]), "the decrypted file should be the zip")
