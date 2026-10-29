@@ -18,7 +18,10 @@ public enum KeepFileEncryption {
 
     /// A decrypted file: the name it had before it was encrypted, and its contents.
     public struct DecryptedFile: Sendable, Equatable {
+        /// The name the file had when it was encrypted, such as `keep-request-1a2b.har`. It comes from the file,
+        /// so use only its last path component when writing it to disk.
         public let fileName: String
+        /// The decrypted contents.
         public let contents: Data
     }
 
@@ -122,13 +125,20 @@ public enum KeepFileEncryption {
     }
 }
 
+/// Why `KeepFileEncryption` could not encrypt or decrypt a file.
 public enum KeepFileEncryptionError: LocalizedError, Sendable, Equatable {
+    /// The password is shorter than `KeepFileEncryption.minimumPasswordLength`.
     case passwordTooShort
+    /// The data does not start with Keep's header, or its header is invalid.
     case notAnEncryptedFile
+    /// The file uses a format version this Keep cannot read.
     case unsupportedVersion
+    /// The password is wrong, or the file was modified or truncated. The two cannot be told apart.
     case wrongPasswordOrDamaged
+    /// The system could not derive a key or generate random bytes.
     case keyDerivationFailed
 
+    /// A sentence to show the tester or print from a command-line tool.
     public var errorDescription: String? {
         switch self {
         case .passwordTooShort:

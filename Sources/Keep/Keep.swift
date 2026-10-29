@@ -72,9 +72,7 @@ public enum Keep {
             throw KeepError.disabled
         }
         let input = try core.reportInput(for: scope, note: note)
-        let archive = try ReportBuilder.archive(input)
-        guard let password else { return archive }
-        return try KeepFileEncryption.encryptFile(at: archive, password: password)
+        return try ReportBuilder.archive(input, password: password)
     }
 
     #if canImport(UIKit)

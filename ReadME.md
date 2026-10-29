@@ -160,10 +160,10 @@ With `.encryptedOnly`, every share asks the tester for a password, at least 8 ch
 To open the file on a Mac, run this from a checkout of Keep:
 
 ```sh
-swift run keep-decrypt ~/Downloads/Keep-MyApp-1.2(45)-20261029-1012.zip.keep ~/Desktop
+swift run keep-decrypt "$HOME/Downloads/Keep-MyApp-1.2(45)-20261029-1012.zip.keep" ~/Desktop
 ```
 
-It asks for the password, then writes the file under its original name. It never overwrites an existing file. In your own tools, call `KeepFileEncryption.decrypt(_:password:)`. `sharing` controls only what the tester sees. Your code can still call `Keep.exportReport(scope:note:password:)`.
+Quote the path: report names contain the build number in parentheses. It asks for the password, then writes the file under its original name. It never overwrites an existing file. In your own tools, call `KeepFileEncryption.decrypt(_:password:)`. `sharing` controls only what the tester sees. Your code can still call `Keep.exportReport(scope:note:password:)`.
 
 ### What is stored, and what is not
 

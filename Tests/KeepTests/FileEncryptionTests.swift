@@ -90,15 +90,28 @@ struct FileEncryptionTests {
                 title: "Current session", logs: [], transactions: [], device: makeDevice(), note: nil,
                 generatedAt: Date(timeIntervalSince1970: 1_700_000_100)
             )
-            let archive = try ReportBuilder.archive(input)
-            let zip = try Data(contentsOf: archive)
-            let encrypted = try KeepFileEncryption.encryptFile(at: archive, password: password)
+            let encrypted = try ReportBuilder.archive(input, password: password)
 
-            #expect(!FileManager.default.fileExists(atPath: archive.path))
-            #expect(encrypted.lastPathComponent == archive.lastPathComponent + ".keep")
+            #expect(encrypted.pathExtension == "keep")
+            let zipName = encrypted.deletingPathExtension().lastPathComponent
+            #expect(zipName.hasPrefix("Keep-Eazy-1.2(45)-") && zipName.hasSuffix(".zip"))
+            // Only the encrypted file is left in the report's working directory.
+            let directory = encrypted.deletingLastPathComponent()
+            #expect(
+                try FileManager.default.contentsOfDirectory(atPath: directory.path) == [encrypted.lastPathComponent])
             let file = try KeepFileEncryption.decrypt(Data(contentsOf: encrypted), password: password)
-            #expect(file.fileName == archive.lastPathComponent)
-            #expect(file.contents == zip)
+            #expect(file.fileName == zipName)
+            #expect(file.contents.starts(with: [0x50, 0x4B, 0x03, 0x04]), "the decrypted file should be the zip")
+        #endif
+    }
+
+    @Test func aReportWithoutAPasswordIsThePlainZip() throws {
+        #if os(macOS)
+            let input = ReportInput(
+                title: "Current session", logs: [], transactions: [], device: makeDevice(), note: nil,
+                generatedAt: Date(timeIntervalSince1970: 1_700_000_100)
+            )
+            #expect(try ReportBuilder.archive(input, password: nil).pathExtension == "zip")
         #endif
     }
 }
@@ -121,3 +134,40 @@ struct SharingTests {
         }
     }
 }
+
+#if canImport(UIKit)
+    import UIKit
+
+    /// The detail Share menu and the password prompt. Runs in the iOS test suite.
+    @Suite("Sharing in the log viewer")
+    @MainActor
+    struct ViewerSharingTests {
+        private let actions = [
+            KeepDetailAction(title: "Copy cURL", kind: .copy {}),
+            KeepDetailAction(title: "Share cURL", kind: .shareText { "curl https://example.com" }),
+            KeepDetailAction(title: "Share HAR file", kind: .shareFile(name: "keep-request-1.har") { Data() })
+        ]
+
+        private func titles(allowedBy mode: KeepSharing) -> [String] {
+            actions.filter { $0.isAllowed(by: mode) }.map(\.title)
+        }
+
+        @Test func allowedModeOffersEveryAction() {
+            #expect(titles(allowedBy: .allowed) == ["Copy cURL", "Share cURL", "Share HAR file"])
+        }
+
+        @Test func encryptedOnlyModeDropsTextShares() {
+            #expect(titles(allowedBy: .encryptedOnly) == ["Copy cURL", "Share HAR file"])
+        }
+
+        @Test func disabledModeLeavesOnlyCopying() {
+            #expect(titles(allowedBy: .disabled) == ["Copy cURL"])
+        }
+
+        @Test func thePasswordMustBeLongEnoughAndRepeated() {
+            #expect(KeepSharePrompt.isAcceptable(password: "correct horse", repeated: "correct horse"))
+            #expect(!KeepSharePrompt.isAcceptable(password: "correct horse", repeated: "correct horsf"))
+            #expect(!KeepSharePrompt.isAcceptable(password: "1234567", repeated: "1234567"))
+        }
+    }
+#endif
