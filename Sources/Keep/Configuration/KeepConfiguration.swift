@@ -1,6 +1,10 @@
 import Foundation
 import Logging
 
+#if canImport(UIKit)
+    import UIKit
+#endif
+
 /// Settings for `Keep.start`. Keep is a no-op unless the running build's distribution is in `allowedDistributions`.
 public struct KeepConfiguration: Sendable {
     /// Entries below this level are never captured.
@@ -20,10 +24,49 @@ public struct KeepConfiguration: Sendable {
     public var tagRules: [KeepTagRule] = KeepTagRule.defaults
     /// Writes the session to an encrypted file on an uncaught exception so the next launch can offer it.
     public var crashSnapshotsEnabled: Bool = true
+    /// What testers may send through the system share sheet. Copy actions are always available.
+    public var sharing: KeepSharing = .allowed
+
+    #if canImport(UIKit)
+        /// Tint for Keep's buttons, controls and highlights. `nil` uses the system blue in Keep's own window, and
+        /// the host's tint in a viewer embedded with `Keep.makeViewer()`.
+        public var accentColor: UIColor?
+    #endif
 
     public init() {}
 
     var distributionDetector: any KeepDistributionDetecting = LiveDistributionDetector()
+}
+
+/// What testers may send through the system share sheet from the shake menu and the log viewer. Copy actions,
+/// such as Copy all and Copy cURL, are available in every mode. `Keep.exportReport` is not affected, because the
+/// app calls it, not the tester.
+public enum KeepSharing: Sendable, CaseIterable {
+    /// Reports, files and text can be shared unencrypted, as before.
+    case allowed
+    /// Only files encrypted with a password the tester chooses when sharing. Sharing plain text is not offered.
+    /// See `KeepFileEncryption`.
+    case encryptedOnly
+    /// Nothing can be shared. The Share report items, the lists' share buttons and the details' share actions are
+    /// removed.
+    case disabled
+}
+
+extension KeepSharing {
+    /// Whether the share sheet may be offered at all.
+    var allowsShareSheet: Bool {
+        self != .disabled
+    }
+
+    /// Whether text and files may be shared without a password.
+    var allowsUnencrypted: Bool {
+        self == .allowed
+    }
+
+    /// Whether every share must be an encrypted file.
+    var requiresPassword: Bool {
+        self == .encryptedOnly
+    }
 }
 
 /// How the running app was distributed. Derived at launch; see `LiveDistributionDetector`.

@@ -93,7 +93,7 @@
                     done(true)
                 }
             }
-            action.backgroundColor = UIColor.systemBlue
+            action.backgroundColor = KeepTheme.accent
             return UISwipeActionsConfiguration(actions: [action])
         }
 

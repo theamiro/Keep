@@ -73,6 +73,8 @@ configuration.memoryCapacity = 2_000           // log entries kept in memory
 configuration.shakeToOpen = true               // shake opens the menu
 configuration.redaction.allowedKeys = ["page"] // keys that must never be redacted
 configuration.redaction.extraKeys = ["customerRef"]
+configuration.accentColor = UIColor(named: "Brand") // tint Keep's UI. nil keeps the system blue
+configuration.sharing = .encryptedOnly         // .allowed (default), .encryptedOnly or .disabled
 Keep.start(configuration)
 ```
 
@@ -100,7 +102,7 @@ The example app's Release configuration uses layers 2–4. Its Debug configurati
 
 The viewer groups pinned logs first and shows compact time, level, source and message rows. Search the logs and filter with **All**, **Info+**, **Warn+** or **Error**. Network rows show the method, status, path, duration and response size; their scope filters are **All**, **2xx**, **4xx**, **5xx** and **Failed**.
 
-Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. The **Share** button on a detail opens a menu. **Copy all** copies the complete plain-text detail, and **Share text** shares that text. Log details also offer **Share as file**. Network details offer **Copy cURL**, **Copy all**, **Share cURL** and **Share HAR file**. Shared files are removed when the share sheet closes.
+Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. The **Share** button on a detail opens a menu. **Copy all** copies the complete plain-text detail, and **Share text** shares that text. Log details also offer **Share as file**. Network details offer **Copy cURL**, **Copy all**, **Share cURL** and **Share HAR file**. Shared files are removed when the share sheet closes. `configuration.sharing` can limit these actions, see [Control what testers can share](#control-what-testers-can-share).
 
 Register your own tools so they appear in the shake menu:
 
@@ -141,7 +143,27 @@ Shake, then choose *Share report*, or use the Share button in the viewer. Keep a
 - `network.har`: HAR 1.2, which opens in browser dev tools and proxy viewers
 - `device.json`: device and app details
 
-The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself.
+The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself. The zip is removed when the share sheet closes.
+
+### Control what testers can share
+
+A report in the wrong hands shows what your app sends and receives. `configuration.sharing` limits what leaves the device through the share sheet. Copy actions (**Copy all**, **Copy cURL** and code-block copy) are available in every mode.
+
+| Mode | Share sheet |
+| --- | --- |
+| `.allowed` (default) | Reports, files and text, unencrypted |
+| `.encryptedOnly` | Encrypted files only. **Share text** and **Share cURL** are hidden |
+| `.disabled` | Nothing. *Share report*, *Share crashed session* and the share buttons are removed, and a detail's button becomes a copy menu |
+
+With `.encryptedOnly`, every share asks the tester for a password, at least 8 characters and typed twice. Keep shares `<name>.keep` instead of the plain file: a report becomes `Keep-…zip.keep`, a network detail `keep-request-….har.keep`. The file is encrypted with AES-256-GCM, using a key derived from the password with PBKDF2-SHA256 (600,000 iterations). A wrong password or a modified file is rejected. Pass the password on separately from the file.
+
+To open the file on a Mac, run this from a checkout of Keep:
+
+```sh
+swift run keep-decrypt "$HOME/Downloads/Keep-MyApp-1.2(45)-20261029-1012.zip.keep" ~/Desktop
+```
+
+Quote the path: report names contain the build number in parentheses. It asks for the password, then writes the file under its original name. It never overwrites an existing file. In your own tools, call `KeepFileEncryption.decrypt(_:password:)`. `sharing` controls only what the tester sees. Your code can still call `Keep.exportReport(scope:note:password:)`.
 
 ### What is stored, and what is not
 

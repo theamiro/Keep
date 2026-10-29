@@ -32,6 +32,13 @@ enum ReportBuilder {
         return try zip(folder: folder, name: name, in: workDirectory)
     }
 
+    /// The zip archive, or with a `password` its encrypted form `<archive>.zip.keep`, with the zip removed.
+    static func archive(_ input: ReportInput, password: String?) throws -> URL {
+        let archive = try archive(input)
+        guard let password else { return archive }
+        return try KeepFileEncryption.encryptFile(at: archive, password: password)
+    }
+
     static func archiveName(for device: DeviceContext, at date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmm"

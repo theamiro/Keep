@@ -27,10 +27,13 @@
     private struct HostedRoot<Content: View>: View {
         let content: Content
         let invalidateSize: KeepInvalidateSize
+        /// `nil` keeps the inherited tint.
+        var accent: Color? = KeepTheme.configuredAccent.map { Color(uiColor: $0) }
 
         var body: some View {
             content
                 .environment(\.keepInvalidateSize, invalidateSize)
+                .tint(accent)
                 .ignoresSafeArea()
         }
     }

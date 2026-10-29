@@ -35,20 +35,18 @@
             ].joined(separator: "\n\n")
         }
 
-        override func shareItems() throws -> [Any] {
-            let data = try HAR.data(for: [transaction], creatorVersion: KeepInfo.version)
-            let fileName = "keep-request-\(transaction.id.prefix(8)).har"
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-            try data.write(to: url)
-            return [url]
-        }
-
-        override func shareMenuActions() -> [UIAlertAction] {
-            [
-                shareMenuAction("Copy cURL") { [weak self] in self?.copyCurl() },
-                shareMenuAction("Copy all") { [weak self] in self?.copyAllToPasteboard() },
-                shareMenuAction("Share HAR file") { [weak self] in self?.presentShareItems() },
-                shareMenuAction("Share cURL") { [weak self] in self?.shareCurl() }
+        override func detailActions() -> [KeepDetailAction] {
+            let transaction = transaction
+            return [
+                KeepDetailAction(title: "Copy cURL", kind: .copy { [weak self] in self?.copyCurl() }),
+                KeepDetailAction(title: "Copy all", kind: .copy { [weak self] in self?.copyAllToPasteboard() }),
+                KeepDetailAction(
+                    title: "Share HAR file",
+                    kind: .shareFile(name: "keep-request-\(transaction.id.prefix(8)).har") {
+                        try HAR.data(for: [transaction], creatorVersion: KeepInfo.version)
+                    }
+                ),
+                KeepDetailAction(title: "Share cURL", kind: .shareText { transaction.curlCommand })
             ]
         }
 
@@ -60,10 +58,6 @@
             copyToPasteboard(transaction.curlCommand) { [weak self] in
                 self?.showPopup(message: "cURL copied")
             }
-        }
-
-        private func shareCurl() {
-            presentActivity(items: [transaction.curlCommand])
         }
 
         private func renderSegment() {
