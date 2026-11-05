@@ -206,7 +206,7 @@ struct RedactorTests {
         ]
         for shape in shapes {
             let elapsed = Self.seconds { _ = redactor.redact(message: shape) }
-            #expect(elapsed < 1, "redaction of a \(shape.prefix(8))… shape took \(elapsed) s")
+            #expect(elapsed < Self.timeBudget, "redaction of a \(shape.prefix(8))… shape took \(elapsed) s")
         }
     }
 
@@ -217,8 +217,12 @@ struct RedactorTests {
             output = redactor.redact(message: run + " john.doe@example.com")
         }
         #expect(!output.contains("john.doe"))
-        #expect(elapsed < 1, "redaction took \(elapsed) s")
+        #expect(elapsed < Self.timeBudget, "redaction took \(elapsed) s")
     }
+
+    /// The longest a redaction may take. The quadratic version took about 49 s on 65 KB, so this still catches a stall,
+    /// and it leaves room for slower CI runners, where a 1 s budget flaked.
+    private static let timeBudget = 5.0
 
     /// How long `body` takes, in seconds. `ContinuousClock` needs iOS 16, and Keep supports iOS 15.
     private static func seconds(_ body: () -> Void) -> Double {
