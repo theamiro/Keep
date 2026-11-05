@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 (unreleased)
+
+### Changed
+
+- Keep requires Runestone 0.5.x (from 0.5.2) and TreeSitterLanguages 0.1.x (from 0.1.10). A `from:` requirement on a 0.x version allowed breaking minor releases, so a later minor version is no longer picked up by accident.
+
+### Fixed
+
+- Reports and HAR files record the Keep version they were made with. They recorded 0.1.0 before.
+
 ## 0.4.0 (2026-10-29)
 
 ### Added

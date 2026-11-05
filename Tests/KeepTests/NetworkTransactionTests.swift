@@ -104,7 +104,7 @@ struct NetworkTransactionTests {
     }
 
     @Test func harOutputFollowsTheHARShape() throws {
-        let data = try HAR.data(for: [makeTransaction()], creatorVersion: "0.1.0")
+        let data = try HAR.data(for: [makeTransaction()], creatorVersion: KeepInfo.version)
         let root = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         let log = try #require(root["log"] as? [String: Any])
         #expect(log["version"] as? String == "1.2")
