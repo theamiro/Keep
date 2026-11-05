@@ -117,4 +117,108 @@ struct RedactorTests {
         #expect(!output.contains("hunter2"))
         #expect(output.contains("user=ann"))
     }
+
+    @Test func accessAndRefreshTokensInFreeTextAreRedacted() {
+        let output = redactor.redact(message: "Refresh failed access_token=abc123 refresh_token=def456 retry=2")
+        #expect(!output.contains("abc123"))
+        #expect(!output.contains("def456"))
+        #expect(output.contains("retry=2"))
+    }
+
+    @Test func clientSecretInFormBodyIsRedactedAndOtherPairsKept() {
+        let output = redactor.redact(
+            body: "grant_type=refresh_token&client_id=app&client_secret=s3cr3t&refresh_token=r3fr35h")
+        #expect(!output.contains("s3cr3t"))
+        #expect(!output.contains("r3fr35h"))
+        #expect(output.contains("client_id=app"))
+    }
+
+    @Test func bracketedFormKeysAreRedacted() {
+        let output = redactor.redact(body: "user[password]=hunter2&user[name]=ann")
+        #expect(!output.contains("hunter2"))
+        #expect(output.contains("user[name]=ann"))
+    }
+
+    @Test func jsonPairsInsideMessagesAreRedacted() {
+        let output = redactor.redact(message: #"Sent {"password": "hunter2"} and {"token":"x"} ok"#)
+        #expect(!output.contains("hunter2"))
+        #expect(!output.contains("\"x\""))
+        #expect(output.contains("ok"))
+    }
+
+    @Test func escapedJSONPairsInsideMessagesAreRedacted() {
+        let output = redactor.redact(message: #"body {\"password\": \"hunter2\"} sent"#)
+        #expect(!output.contains("hunter2"))
+    }
+
+    @Test func secretBeforeTheBodyCutIsRedactedWhenTheJSONNoLongerParses() {
+        let padding = String(repeating: "a", count: KeepHTTPTransaction.maximumBodyBytes)
+        let body = KeepBody(Data(#"{"password":"hunter2","note":"\#(padding)"}"#.utf8))
+        #expect(body.isTruncated)
+        let output = body.redacted(redactor)
+        #expect(!output.text.contains("hunter2"))
+        #expect(output.text.contains("[REDACTED]"))
+    }
+
+    @Test func fragmentTokensInURLsAreRedacted() {
+        let output = redactor.redact(url: "https://app.example.com/callback#access_token=opaque123&expires_in=3600")
+        #expect(!output.contains("opaque123"))
+        #expect(output.contains("expires_in=3600"))
+    }
+
+    @Test func signedURLParametersAreRedacted() {
+        let output = redactor.redact(url: "https://s3.example.com/object?X-Amz-Signature=abcdef&X-Amz-Date=20260101")
+        #expect(!output.contains("abcdef"))
+        #expect(output.contains("X-Amz-Date=20260101"))
+    }
+
+    @Test func signatureSessionAndSidKeysAreSensitive() {
+        #expect(redactor.isSensitive(key: "X-Amz-Signature"))
+        #expect(redactor.isSensitive(key: "sessionId"))
+        #expect(redactor.isSensitive(key: "sid"))
+        #expect(!redactor.isSensitive(key: "sidebar"))
+    }
+
+    @Test func customPatternsThatDoNotCompileAreReportedAndSkipped() {
+        var policy = KeepRedactionPolicy()
+        policy.extraPatterns = ["([unclosed", "ORDER-\\d+"]
+        let custom = Redactor(policy: policy)
+        #expect(custom.rejectedPatterns == ["([unclosed"])
+        #expect(!custom.redact(message: "shipped ORDER-4421").contains("4421"))
+    }
+
+    @Test func rejectedCustomPatternIsRecordedAsCriticalEntryAtStart() throws {
+        var configuration = makeConfiguration()
+        configuration.redaction.extraPatterns = ["([unclosed"]
+        let core = makeCore(configuration, directory: try makeTemporaryDirectory())
+        let entry = try #require(core.logs.snapshot().first)
+        #expect(entry.level == .critical)
+        #expect(entry.label == "Keep")
+        #expect(entry.message.contains("([unclosed"))
+    }
+
+    @Test func repeatedPatternShapesDoNotStallRedaction() {
+        let shapes = [
+            String(repeating: "eyJ-", count: 25_000),
+            String(repeating: "a@", count: 50_000),
+            String(repeating: "a.", count: 50_000),
+            String(repeating: "bearer ", count: 14_000)
+        ]
+        let clock = ContinuousClock()
+        for shape in shapes {
+            let elapsed = clock.measure { _ = redactor.redact(message: shape) }
+            #expect(elapsed < .seconds(1), "redaction of a \(shape.prefix(8))… shape took \(elapsed)")
+        }
+    }
+
+    @Test func longAlphanumericRunStillRedactsQuicklyAndFindsEmails() {
+        let run = String(repeating: "aB3", count: 33_334)
+        let clock = ContinuousClock()
+        var output = ""
+        let elapsed = clock.measure {
+            output = redactor.redact(message: run + " john.doe@example.com")
+        }
+        #expect(!output.contains("john.doe"))
+        #expect(elapsed < .seconds(1), "redaction took \(elapsed)")
+    }
 }

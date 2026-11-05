@@ -17,6 +17,8 @@ final class KeepCore: @unchecked Sendable {
     let transactions: MemoryBuffer<KeepHTTPTransaction>
     /// Fires on the main thread after logs or transactions change. Coalesced, so bursts produce one event.
     let changes = PassthroughSubject<Void, Never>()
+    /// Custom redaction patterns that did not compile. They are not applied.
+    var rejectedRedactionPatterns: [String] { redactor.rejectedPatterns }
 
     private let redactor: Redactor
     private let queue = DispatchQueue(label: "com.keep.core", qos: .utility)
@@ -61,6 +63,18 @@ final class KeepCore: @unchecked Sendable {
             snapshotStore = nil
             previousSnapshot = nil
             try? FileManager.default.removeItem(at: storageDirectory)
+        }
+
+        // A pattern that does not compile is not applied, so say so in the session rather than fail silently.
+        if isEnabled {
+            for pattern in redactor.rejectedPatterns {
+                logs.append(
+                    makeEntry(
+                        sequence: nextSequence(), timestamp: Date(), level: .critical, label: "Keep",
+                        message: "Redaction pattern rejected, so it is not applied: \(pattern)",
+                        metadata: [:], source: "Keep", file: #fileID, function: #function, line: #line
+                    ))
+            }
         }
     }
 
