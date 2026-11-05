@@ -143,7 +143,7 @@ Shake, then choose *Share report*, or use the Share button in the viewer. Keep a
 - `network.har`: HAR 1.2, which opens in browser dev tools and proxy viewers
 - `device.json`: device and app details
 
-The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself. The zip is removed when the share sheet closes.
+The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself. The zip is removed when the share sheet closes. A report from `Keep.exportReport` is yours to delete once you have shared it. Keep removes any `keep-…` files left in the temporary directory at the next launch.
 
 ### Control what testers can share
 
@@ -167,7 +167,7 @@ Quote the path: report names contain the build number in parentheses. It asks fo
 
 ### What is stored, and what is not
 
-- **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Killing the app clears them.
+- **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Network transactions are also capped by `networkByteBudget` (32 MB by default). Each log message or metadata string is cut at 64 KB. Killing the app clears them.
 - **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
 - **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
 

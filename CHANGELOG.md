@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 (unreleased)
+
+### Added
+
+- `KeepConfiguration.networkByteBudget` caps the memory that network transactions can hold, counted from their URLs, headers and bodies. When it is reached the oldest transactions go first. The default is 32 MB.
+
+### Fixed
+
+- Log messages and metadata strings longer than 64 KB are cut and marked, so one huge message cannot fill the memory or slow redaction.
+- JSON nested deeper than 256 levels is shown as raw text, and finding JSON inside a string tries at most 16 bracket positions.
+- Rows in the log and network lists are identified by ID, so pinning a log entry updates its row without rebuilding the list.
+- Keep removes `keep-…` files that an earlier session left in the temporary directory, including in builds where Keep does not run.
+
 ## 0.4.0 (2026-10-29)
 
 ### Added
