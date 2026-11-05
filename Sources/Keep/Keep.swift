@@ -19,6 +19,12 @@ public enum Keep {
             makeKey: { configuration.crashSnapshotsEnabled ? KeychainKey.loadOrCreate() : nil }
         )
         guard KeepRuntime.shared.install(core), core.isEnabled else { return }
+        // The session records the rejected patterns as critical entries. Debug builds stop here as well, so the
+        // mistake is found before the build is shared.
+        assert(
+            core.rejectedRedactionPatterns.isEmpty,
+            "Keep did not apply these redaction patterns: \(core.rejectedRedactionPatterns.joined(separator: ", "))"
+        )
         CrashCapture.install(core: core)
         #if canImport(UIKit)
             KeepWindowPresenter.shared.start(shakeEnabled: configuration.shakeToOpen)

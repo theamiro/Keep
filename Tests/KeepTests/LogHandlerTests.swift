@@ -9,7 +9,7 @@ struct LogHandlerTests {
     @Test func handlerMetadataAndCallSiteMetadataAreMerged() throws {
         let core = try makeCore(directory: makeTemporaryDirectory())
         var handler = KeepLogHandler(label: "com.example.network", core: core)
-        handler[metadataKey: "session"] = .string("abc")
+        handler[metadataKey: "requestId"] = .string("abc")
         handler.log(
             level: .info,
             message: "Fetched items",
@@ -23,7 +23,7 @@ struct LogHandlerTests {
 
         let entry = try #require(core.logs.snapshot().first)
         #expect(entry.label == "com.example.network")
-        #expect(entry.metadata["session"] == .string("abc"))
+        #expect(entry.metadata["requestId"] == .string("abc"))
         #expect(entry.metadata["status"] == .string("200"))
         #expect(entry.file == "Client.swift")
         #expect(entry.line == 42)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 (unreleased)
+
+### Security
+
+- Redaction covers more secrets in text. A `key: value` or `key=value` pair, including JSON such as `"password": "…"` and escaped JSON, has its value redacted when the key is sensitive, for example `access_token`, `refresh_token` or `client_secret`. This applies to log messages, error text, notes, header values and bodies, including a body cut at 256 KB whose JSON no longer parses. Form bodies (`a=b&c=d`) and URL fragments (`#access_token=…`) are redacted pair by pair.
+- `signature`, `session` and `sid` are sensitive keys, so `X-Amz-Signature` and `sessionId` are redacted.
+- Redaction no longer stalls on long runs of letters and digits, which could take many seconds for a few tens of kilobytes.
+- A custom redaction pattern that does not compile is no longer dropped silently. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
+
 ## 0.4.0 (2026-10-29)
 
 ### Added
