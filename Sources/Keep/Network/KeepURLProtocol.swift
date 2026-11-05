@@ -80,22 +80,24 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     /// Passes the forwarding session's callbacks on to the app's session, and records the transaction when it ends.
+    ///
+    /// The closures hold this instance strongly. The app's session can release the instance when a redirect is handed
+    /// back or the request is stopped, and a weak reference then dropped the transaction of the forwarded request whose
+    /// completion arrived later. Every path invalidates the forwarding session, which releases the delegate, so the
+    /// reference does not outlive the request.
     private func makeForwardingDelegate() -> ForwardingDelegate {
         ForwardingDelegate(
-            onRedirect: { [weak self] newRequest, response in
-                guard let self else { return }
+            onRedirect: { [self] newRequest, response in
                 redirected = true
                 receivedResponse = response
                 client?.urlProtocol(self, wasRedirectedTo: Self.nextHop(from: newRequest), redirectResponse: response)
                 forwardingTask?.cancel()
             },
-            onResponse: { [weak self] response in
-                self?.receivedResponse = response
-                guard let self else { return }
+            onResponse: { [self] response in
+                receivedResponse = response
                 client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             },
-            onData: { [weak self] data in
-                guard let self else { return }
+            onData: { [self] data in
                 receivedByteCount += data.count
                 let room = KeepHTTPTransaction.maximumBodyBytes + 1 - receivedBody.count
                 if room > 0 {
@@ -103,8 +105,7 @@ public final class KeepURLProtocol: URLProtocol, @unchecked Sendable {
                 }
                 client?.urlProtocol(self, didLoad: data)
             },
-            onComplete: { [weak self] error in
-                guard let self else { return }
+            onComplete: { [self] error in
                 if !redirected {
                     if let error {
                         client?.urlProtocol(self, didFailWithError: error)

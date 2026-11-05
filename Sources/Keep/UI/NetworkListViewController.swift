@@ -25,7 +25,10 @@
 
         private typealias NetworkCell = KeepHostingCell<NetworkRow>
 
-        private var dataSource: UITableViewDiffableDataSource<Int, KeepHTTPTransaction>!
+        /// Rows are identified by transaction ID, so the diff compares small strings. The transactions live in
+        /// `transactionsByID`.
+        private var dataSource: UITableViewDiffableDataSource<Int, String>!
+        private var transactionsByID: [String: KeepHTTPTransaction] = [:]
         private let emptyState = KeepHostingView(KeepEmptyState(message: ""))
         private var searchTerm = ""
         private var scope = Scope.all
@@ -37,9 +40,11 @@
             tableView.register(NetworkCell.self, forCellReuseIdentifier: NetworkCell.reuseIdentifier)
             tableView.estimatedRowHeight = 94
             tableView.rowHeight = UITableView.automaticDimension
-            dataSource = UITableViewDiffableDataSource(tableView: tableView) { tableView, indexPath, transaction in
+            dataSource = UITableViewDiffableDataSource(tableView: tableView) { [weak self] tableView, indexPath, id in
                 let cell = tableView.dequeueReusableCell(withIdentifier: NetworkCell.reuseIdentifier, for: indexPath)
-                (cell as? NetworkCell)?.setContent(NetworkRow(transaction: transaction))
+                if let transaction = self?.transactionsByID[id] {
+                    (cell as? NetworkCell)?.setContent(NetworkRow(transaction: transaction))
+                }
                 return cell
             }
 
@@ -64,7 +69,9 @@
 
         override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
             tableView.deselectRow(at: indexPath, animated: true)
-            guard let transaction = dataSource.itemIdentifier(for: indexPath) else { return }
+            guard let id = dataSource.itemIdentifier(for: indexPath), let transaction = transactionsByID[id] else {
+                return
+            }
             navigationController?.pushViewController(
                 NetworkDetailViewController(transaction: transaction), animated: true
             )
@@ -75,9 +82,10 @@
             let visible = all.filter { transaction in
                 scope.includes(transaction) && (searchTerm.isEmpty || Self.matches(transaction, term: searchTerm))
             }
-            var snapshot = NSDiffableDataSourceSnapshot<Int, KeepHTTPTransaction>()
+            transactionsByID = Dictionary(visible.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+            var snapshot = NSDiffableDataSourceSnapshot<Int, String>()
             snapshot.appendSections([0])
-            snapshot.appendItems(visible, toSection: 0)
+            snapshot.appendItems(visible.map(\.id), toSection: 0)
             dataSource.apply(snapshot, animatingDifferences: false)
             title = "Network"
             tabBarItem.badgeValue = visible.isEmpty ? nil : String(visible.count)

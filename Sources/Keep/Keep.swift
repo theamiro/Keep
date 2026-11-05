@@ -18,6 +18,8 @@ public enum Keep {
             storageDirectory: KeepCore.defaultStorageDirectory(),
             makeKey: { configuration.crashSnapshotsEnabled ? KeychainKey.loadOrCreate() : nil }
         )
+        // Runs in every build, including those where Keep does not run, so an earlier session's files do not linger.
+        KeepCore.removeStaleTemporaryFiles(in: FileManager.default.temporaryDirectory)
         guard KeepRuntime.shared.install(core), core.isEnabled else { return }
         // The session records the rejected patterns as critical entries. Debug builds stop here as well, so the
         // mistake is found before the build is shared.
@@ -69,6 +71,10 @@ public enum Keep {
     /// With a `password`, returns `<archive>.zip.keep` instead, encrypted with `KeepFileEncryption`, and removes
     /// the unencrypted zip. `KeepConfiguration.sharing` does not apply here, because the app calls this, not the
     /// tester.
+    ///
+    /// The file is in its own `keep-…` folder in the temporary directory, and the caller owns it. Once it has been
+    /// shared, delete the folder (`url.deletingLastPathComponent()`), as Keep's share sheet does. Keep removes any
+    /// `keep-…` entries that remain at the next launch.
     public static func exportReport(
         scope: KeepExportScope = .currentSession,
         note: String? = nil,

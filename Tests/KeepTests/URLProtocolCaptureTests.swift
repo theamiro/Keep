@@ -41,7 +41,8 @@ struct URLProtocolCaptureTests {
 
     /// Waits for the transaction recorded for `path`, since capture runs on Keep's queue.
     private func recordedTransaction(path: String) async throws -> KeepHTTPTransaction {
-        for _ in 0..<40 {
+        // Up to 10 s. Capture runs on Keep's queue, and a slow CI runner needs longer than 2 s.
+        for _ in 0..<200 {
             Self.core.drainQueue()
             let found = Self.core.transactions.snapshot().first { URL(string: $0.url)?.path == path }
             if let found {

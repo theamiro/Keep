@@ -4,10 +4,15 @@
 
 ### Added
 
+- `KeepConfiguration.networkByteBudget` caps the memory that network transactions can hold, counted from their URLs, headers and bodies. When it is reached the oldest transactions go first. The default is 32 MB.
 - `Diagnostics.captureNetwork(on:)` in the copy-in template records the requests of a `URLSessionConfiguration` with one call. Apps need no other Keep import. It does nothing when Keep is not compiled in.
 
 ### Fixed
 
+- Log messages and metadata strings longer than 64 KB are cut and marked, so one huge message cannot fill the memory or slow redaction.
+- JSON nested deeper than 256 levels is shown as raw text, and finding JSON inside a string tries at most 16 bracket positions.
+- Rows in the log and network lists are identified by ID, so pinning a log entry updates its row without rebuilding the list.
+- Keep removes `keep-…` files that an earlier session left in the temporary directory, including in builds where Keep does not run.
 - Requests whose body is a stream are recorded with their body, and the forwarded request sends the same bytes.
 - Redirects are recorded hop by hop. Before, the request after a redirect bypassed capture.
 
