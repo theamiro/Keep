@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 (unreleased)
+
+### Changed
+
+- The build check (`Scripts/keep-verify-excluded.sh`) is an allowlist. It checks every configuration except those in `KEEP_ALLOWED_CONFIGURATIONS`, which defaults to `Debug`. Apps whose internal configurations have `KEEP_ENABLED` must list them, for example `Debug;Development;UAT`, or their builds fail. `KEEP_FORBIDDEN_CONFIGURATIONS` is deprecated. It still forces a check, with a warning, for one release.
+- The build check scans every Mach-O file under the frameworks and plug-ins, not only the executable and the dylibs beside it. It fails when a file or folder cannot be read or listed, or when `CONFIGURATION` is empty. See [ADR 0006](docs/adr/0006-build-check-allowlist.md).
+- The build check reads files in the C locale. In a UTF-8 locale it could miss a marker next to invalid bytes.
+
 ## 0.4.0 (2026-10-29)
 
 ### Added
