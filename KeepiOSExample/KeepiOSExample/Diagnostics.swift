@@ -51,6 +51,14 @@ enum Diagnostics {
             Keep.present()
         #endif
     }
+
+    /// Records the requests of sessions made with `configuration`. Set it before creating the session, and keep the
+    /// configuration's other settings. Without the condition this does nothing.
+    static func captureNetwork(on configuration: URLSessionConfiguration) {
+        #if KEEP_ENABLED
+            KeepURLProtocol.install(on: configuration)
+        #endif
+    }
 }
 
 #if KEEP_ENABLED && canImport(Alamofire)

@@ -17,6 +17,8 @@ final class KeepCore: @unchecked Sendable {
     let transactions: MemoryBuffer<KeepHTTPTransaction>
     /// Fires on the main thread after logs or transactions change. Coalesced, so bursts produce one event.
     let changes = PassthroughSubject<Void, Never>()
+    /// Custom redaction patterns that did not compile. They are not applied.
+    var rejectedRedactionPatterns: [String] { redactor.rejectedPatterns }
 
     private let redactor: Redactor
     private let queue = DispatchQueue(label: "com.keep.core", qos: .utility)
@@ -64,6 +66,18 @@ final class KeepCore: @unchecked Sendable {
             previousSnapshot = nil
             try? FileManager.default.removeItem(at: storageDirectory)
         }
+
+        // A pattern that does not compile is not applied, so say so in the session rather than fail silently.
+        if isEnabled {
+            for pattern in redactor.rejectedPatterns {
+                logs.append(
+                    makeEntry(
+                        sequence: nextSequence(), timestamp: Date(), level: .critical, label: "Keep",
+                        message: "Redaction pattern rejected, so it is not applied: \(pattern)",
+                        metadata: [:], source: "Keep", file: #fileID, function: #function, line: #line
+                    ))
+            }
+        }
     }
 
     static func defaultStorageDirectory() -> URL {
@@ -71,16 +85,6 @@ final class KeepCore: @unchecked Sendable {
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.temporaryDirectory
         return support.appendingPathComponent("Keep", isDirectory: true)
-    }
-
-    /// Removes what an earlier session left in `directory`: every entry named `keep-…`. Keep removes its own files
-    /// when a share sheet closes, so any that remain came from a session that ended before this launch. `Keep.start`
-    /// calls this in every build, including the ones that do not run Keep.
-    static func removeStaleTemporaryFiles(in directory: URL) {
-        let contents = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
-        for entry in contents ?? [] where entry.lastPathComponent.hasPrefix("keep-") {
-            try? FileManager.default.removeItem(at: entry)
-        }
     }
 
     // MARK: Capture
@@ -109,33 +113,6 @@ final class KeepCore: @unchecked Sendable {
             )
             logs.append(entry)
             scheduleNotification()
-        }
-    }
-
-    /// The most text one log message, or one metadata string, keeps. Longer text is cut and marked, which bounds the
-    /// memory that 2,000 entries can hold and the work redaction does on each.
-    static let maximumLogTextBytes = 64 * 1024
-
-    static func cappedText(_ text: String) -> String {
-        let bytes = text.utf8.count
-        guard bytes > maximumLogTextBytes else { return text }
-        // Whole characters only, so the cut never splits one.
-        var kept = ""
-        for character in text {
-            guard kept.utf8.count + character.utf8.count <= maximumLogTextBytes else { break }
-            kept.append(character)
-        }
-        return kept + "… [truncated, \(bytes) bytes]"
-    }
-
-    static func cappedValue(_ value: JSONValue) -> JSONValue {
-        switch value {
-        case .string(let text):
-            return .string(cappedText(text))
-        case .array(let items):
-            return .array(items.map { cappedValue($0) })
-        case .object(let object):
-            return .object(object.mapValues { cappedValue($0) })
         }
     }
 
@@ -304,6 +281,46 @@ final class KeepCore: @unchecked Sendable {
         DispatchQueue.main.async { [self] in
             stateLock.locked { notificationPending = false }
             changes.send()
+        }
+    }
+}
+
+/// Limits on what Keep captures, and the cleanup of its temporary files.
+extension KeepCore {
+    /// The most text one log message, or one metadata string, keeps. Longer text is cut and marked, which bounds the
+    /// memory that 2,000 entries can hold and the work redaction does on each.
+    static let maximumLogTextBytes = 64 * 1024
+
+    static func cappedText(_ text: String) -> String {
+        let bytes = text.utf8.count
+        guard bytes > maximumLogTextBytes else { return text }
+        // Whole characters only, so the cut never splits one.
+        var kept = ""
+        for character in text {
+            guard kept.utf8.count + character.utf8.count <= maximumLogTextBytes else { break }
+            kept.append(character)
+        }
+        return kept + "… [truncated, \(bytes) bytes]"
+    }
+
+    static func cappedValue(_ value: JSONValue) -> JSONValue {
+        switch value {
+        case .string(let text):
+            return .string(cappedText(text))
+        case .array(let items):
+            return .array(items.map { cappedValue($0) })
+        case .object(let object):
+            return .object(object.mapValues { cappedValue($0) })
+        }
+    }
+
+    /// Removes what an earlier session left in `directory`: every entry named `keep-…`. Keep removes its own files
+    /// when a share sheet closes, so any that remain came from a session that ended before this launch. `Keep.start`
+    /// calls this in every build, including the ones that do not run Keep.
+    static func removeStaleTemporaryFiles(in directory: URL) {
+        let contents = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        for entry in contents ?? [] where entry.lastPathComponent.hasPrefix("keep-") {
+            try? FileManager.default.removeItem(at: entry)
         }
     }
 }

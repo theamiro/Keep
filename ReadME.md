@@ -130,7 +130,7 @@ Keep.record(KeepHTTPTransaction(
 ))
 ```
 
-For URLSession, `KeepURLProtocol.install(on:)` captures traffic from a configuration you choose. It forwards each request through its own session, so the app sees the same responses and redirects. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
+For URLSession, `Diagnostics.captureNetwork(on:)` (or `KeepURLProtocol.install(on:)` directly) captures traffic from a configuration you choose. Call it before creating the session. Capture does nothing when Keep is not running, and it lets a request through untouched in that case. It forwards each request through its own session, so the app sees the same responses and redirects. Requests with a body are captured too, including bodies sent as streams. The forwarding session keeps no URL cache, so responses are not written to disk. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
 
 For Alamofire, use an `EventMonitor` that calls `Keep.record`. The copy-in template includes one, guarded by `#if canImport(Alamofire)`.
 
@@ -169,7 +169,7 @@ Quote the path: report names contain the build number in parentheses. It asks fo
 
 - **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Network transactions are also capped by `networkByteBudget` (32 MB by default). Each log message or metadata string is cut at 64 KB. Killing the app clears them.
 - **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
-- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
+- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials, sensitive query values and `#access_token=` fragments, sensitive JSON keys, sensitive `key=value` pairs in text, form bodies and escaped JSON, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token`, `apiKey` and `refresh_token` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own. A custom pattern that does not compile is not applied. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
 
 ### Limits
 
