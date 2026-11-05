@@ -130,7 +130,7 @@ Keep.record(KeepHTTPTransaction(
 ))
 ```
 
-For URLSession, `KeepURLProtocol.install(on:)` captures traffic from a configuration you choose. It forwards each request through its own session, so the app sees the same responses and redirects. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
+For URLSession, `Diagnostics.captureNetwork(on:)` (or `KeepURLProtocol.install(on:)` directly) captures traffic from a configuration you choose. Call it before creating the session. Capture does nothing when Keep is not running, and it lets a request through untouched in that case. It forwards each request through its own session, so the app sees the same responses and redirects. Requests with a body are captured too, including bodies sent as streams. The forwarding session keeps no URL cache, so responses are not written to disk. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
 
 For Alamofire, use an `EventMonitor` that calls `Keep.record`. The copy-in template includes one, guarded by `#if canImport(Alamofire)`.
 

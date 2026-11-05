@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.4.0 (2026-10-29)
+## 0.5.0 (unreleased)
+
+### Added
+
+- `Diagnostics.captureNetwork(on:)` in the copy-in template records the requests of a `URLSessionConfiguration` with one call. Apps need no other Keep import. It does nothing when Keep is not compiled in.
+
+### Fixed
+
+- Requests whose body is a stream are recorded with their body, and the forwarded request sends the same bytes.
+- Redirects are recorded hop by hop. Before, the request after a redirect bypassed capture.
+
+### Security
+
+- URLSession capture does nothing unless Keep is running. Before, a build where Keep was not allowed still routed requests through Keep's forwarding session.
+- The forwarding session no longer uses the shared URL cache, which is on disk.
 
 ### Added
 
