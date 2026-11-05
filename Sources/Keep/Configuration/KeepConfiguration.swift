@@ -13,6 +13,9 @@ public struct KeepConfiguration: Sendable {
     public var memoryCapacity: Int = 2000
     /// Maximum network transactions kept in memory.
     public var networkCapacity: Int = 200
+    /// Approximate bytes of network transactions kept in memory, counting URLs, headers and bodies. When it is reached,
+    /// the oldest transactions are evicted first, so a few large responses cannot fill the memory. Default 32 MB.
+    public var networkByteBudget: Int = 32 * 1024 * 1024
     /// Keys whose values are never redacted, and extra sensitive keys or patterns.
     public var redaction = KeepRedactionPolicy()
     /// Build types that may run Keep. App Store builds, and builds whose distribution cannot be determined,

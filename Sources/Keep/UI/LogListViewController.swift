@@ -29,7 +29,9 @@
 
         private typealias LogCell = KeepHostingCell<LogRow>
 
-        private var dataSource: UITableViewDiffableDataSource<Section, LogEntry>!
+        /// Rows are identified by entry ID, so the diff compares small strings. The entries live in `entriesByID`.
+        private var dataSource: UITableViewDiffableDataSource<Section, String>!
+        private var entriesByID: [String: LogEntry] = [:]
         private let emptyState = KeepHostingView(KeepEmptyState(message: ""))
         private var allEntries: [LogEntry] = []
         private var scope = Scope.all
@@ -43,9 +45,11 @@
             tableView.estimatedRowHeight = 92
             tableView.rowHeight = UITableView.automaticDimension
             tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
-            dataSource = UITableViewDiffableDataSource(tableView: tableView) { tableView, indexPath, entry in
+            dataSource = UITableViewDiffableDataSource(tableView: tableView) { [weak self] tableView, indexPath, id in
                 let cell = tableView.dequeueReusableCell(withIdentifier: LogCell.reuseIdentifier, for: indexPath)
-                (cell as? LogCell)?.setContent(LogRow(entry: entry))
+                if let entry = self?.entriesByID[id] {
+                    (cell as? LogCell)?.setContent(LogRow(entry: entry))
+                }
                 return cell
             }
 
@@ -70,7 +74,7 @@
 
         override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
             tableView.deselectRow(at: indexPath, animated: true)
-            guard let entry = dataSource.itemIdentifier(for: indexPath) else { return }
+            guard let id = dataSource.itemIdentifier(for: indexPath), let entry = entriesByID[id] else { return }
             navigationController?.pushViewController(LogDetailViewController(entry: entry), animated: true)
         }
 
@@ -78,7 +82,7 @@
             _: UITableView,
             leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
         ) -> UISwipeActionsConfiguration? {
-            guard let entry = dataSource.itemIdentifier(for: indexPath) else { return nil }
+            guard let id = dataSource.itemIdentifier(for: indexPath), let entry = entriesByID[id] else { return nil }
             let action = UIContextualAction(
                 style: .normal,
                 title: entry.isPinned ? "Unpin" : "Pin"
@@ -102,16 +106,26 @@
             let visible = allEntries.filter { entry in
                 entry.level >= scope.minimumLevel && (searchTerm.isEmpty || entry.matches(searchTerm))
             }
-            var snapshot = NSDiffableDataSourceSnapshot<Section, LogEntry>()
+            let previous = entriesByID
+            entriesByID = Dictionary(visible.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+            var snapshot = NSDiffableDataSourceSnapshot<Section, String>()
             let pinned = visible.filter(\.isPinned)
             let others = visible.filter { !$0.isPinned }
             if !pinned.isEmpty {
                 snapshot.appendSections([.pinned])
-                snapshot.appendItems(pinned, toSection: .pinned)
+                snapshot.appendItems(pinned.map(\.id), toSection: .pinned)
             }
             if !others.isEmpty {
                 snapshot.appendSections([.all])
-                snapshot.appendItems(others, toSection: .all)
+                snapshot.appendItems(others.map(\.id), toSection: .all)
+            }
+            // The identifier stays the same when an entry is pinned, so a row whose content changed is reconfigured.
+            let changed = visible.compactMap { entry -> String? in
+                guard let old = previous[entry.id], old != entry else { return nil }
+                return entry.id
+            }
+            if !changed.isEmpty {
+                snapshot.reconfigureItems(changed)
             }
             dataSource.apply(snapshot, animatingDifferences: false)
             title = "Logs"

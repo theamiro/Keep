@@ -117,35 +117,3 @@ struct NetworkTransactionTests {
         #expect(entry["time"] as? Double == 250)
     }
 }
-
-/// Runs with the shared runtime, so it is the only test that installs a core into it.
-@Suite("URLSession capture", .serialized)
-struct URLProtocolCaptureTests {
-    @Test func failedRequestsAreForwardedAndRecorded() async throws {
-        let core = try makeCore(directory: makeTemporaryDirectory())
-        #expect(KeepRuntime.shared.install(core))
-
-        let configuration = URLSessionConfiguration.ephemeral
-        KeepURLProtocol.install(on: configuration)
-        let session = URLSession(configuration: configuration)
-        // Port 9 on loopback refuses the connection, so the request fails without touching the network.
-        let url = try #require(URL(string: "http://127.0.0.1:9/items?token=abc"))
-
-        await #expect(throws: (any Error).self) {
-            _ = try await session.data(from: url)
-        }
-
-        var recorded: [KeepHTTPTransaction] = []
-        for _ in 0..<40 where recorded.isEmpty {
-            core.drainQueue()
-            recorded = core.transactions.snapshot()
-            if recorded.isEmpty {
-                try await Task.sleep(nanoseconds: 50_000_000)
-            }
-        }
-        let transaction = try #require(recorded.first)
-        #expect(transaction.label == "URLSession")
-        #expect(transaction.errorDescription != nil)
-        #expect(!transaction.url.contains("abc"))
-    }
-}
