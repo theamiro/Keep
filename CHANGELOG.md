@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.4.1 (unreleased)
+## 0.5.0 (unreleased)
+
+### Added
+
+- `Diagnostics.captureNetwork(on:)` in the copy-in template records the requests of a `URLSessionConfiguration` with one call. Apps need no other Keep import. It does nothing when Keep is not compiled in.
+
+### Fixed
+
+- Requests whose body is a stream are recorded with their body, and the forwarded request sends the same bytes.
+- Redirects are recorded hop by hop. Before, the request after a redirect bypassed capture.
 
 ### Security
 
@@ -8,6 +17,8 @@
 - `signature`, `session` and `sid` are sensitive keys, so `X-Amz-Signature` and `sessionId` are redacted.
 - Redaction no longer stalls on long runs of letters and digits, which could take many seconds for a few tens of kilobytes.
 - A custom redaction pattern that does not compile is no longer dropped silently. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
+- URLSession capture does nothing unless Keep is running. Before, a build where Keep was not allowed still routed requests through Keep's forwarding session.
+- The forwarding session no longer uses the shared URL cache, which is on disk.
 
 ## 0.4.0 (2026-10-29)
 

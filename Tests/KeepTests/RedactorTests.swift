@@ -204,21 +204,26 @@ struct RedactorTests {
             String(repeating: "a.", count: 50_000),
             String(repeating: "bearer ", count: 14_000)
         ]
-        let clock = ContinuousClock()
         for shape in shapes {
-            let elapsed = clock.measure { _ = redactor.redact(message: shape) }
-            #expect(elapsed < .seconds(1), "redaction of a \(shape.prefix(8))… shape took \(elapsed)")
+            let elapsed = Self.seconds { _ = redactor.redact(message: shape) }
+            #expect(elapsed < 1, "redaction of a \(shape.prefix(8))… shape took \(elapsed) s")
         }
     }
 
     @Test func longAlphanumericRunStillRedactsQuicklyAndFindsEmails() {
         let run = String(repeating: "aB3", count: 33_334)
-        let clock = ContinuousClock()
         var output = ""
-        let elapsed = clock.measure {
+        let elapsed = Self.seconds {
             output = redactor.redact(message: run + " john.doe@example.com")
         }
         #expect(!output.contains("john.doe"))
-        #expect(elapsed < .seconds(1), "redaction took \(elapsed)")
+        #expect(elapsed < 1, "redaction took \(elapsed) s")
+    }
+
+    /// How long `body` takes, in seconds. `ContinuousClock` needs iOS 16, and Keep supports iOS 15.
+    private static func seconds(_ body: () -> Void) -> Double {
+        let start = DispatchTime.now().uptimeNanoseconds
+        body()
+        return Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000_000
     }
 }
