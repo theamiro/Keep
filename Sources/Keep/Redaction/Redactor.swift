@@ -6,7 +6,8 @@ public struct KeepRedactionPolicy: Sendable {
     public var allowedKeys: Set<String> = []
     /// Extra keys (case-insensitive) whose values are always redacted.
     public var extraKeys: Set<String> = []
-    /// Extra regular expressions. Each match is replaced with `[REDACTED]`. Invalid patterns are ignored.
+    /// Extra regular expressions. Each match is replaced with `[REDACTED]`. A pattern that does not compile is not
+    /// applied. Keep records it as a critical entry when it starts, and asserts in debug builds.
     public var extraPatterns: [String] = []
 
     public init() {}
@@ -19,7 +20,7 @@ struct Redactor: Sendable {
     private static let sensitiveTokens: Set<String> = [
         "token", "auth", "authorization", "bearer", "password", "passcode", "pass", "pin", "secret",
         "credential", "credentials", "cookie", "otp", "cvv", "ssn", "iban", "email", "phone", "msisdn",
-        "address", "key"
+        "address", "key", "signature", "session", "sid"
     ]
     private static let sensitivePhrases: [[String]] = [
         ["api", "key"], ["access", "key"], ["private", "key"], ["card", "number"],
@@ -29,6 +30,8 @@ struct Redactor: Sendable {
     private let allowedKeys: Set<String>
     private let extraKeys: Set<String>
     private let patterns: [CompiledPattern]
+    /// Patterns that did not compile, built-in or custom. They are not applied.
+    let rejectedPatterns: [String]
 
     private struct CompiledPattern: @unchecked Sendable {
         let regex: NSRegularExpression
@@ -37,9 +40,17 @@ struct Redactor: Sendable {
     init(policy: KeepRedactionPolicy) {
         allowedKeys = Set(policy.allowedKeys.map { $0.lowercased() })
         extraKeys = Set(policy.extraKeys.map { $0.lowercased() })
-        patterns = (Self.builtInPatterns + policy.extraPatterns).compactMap { pattern in
-            (try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])).map(CompiledPattern.init)
+        var compiled: [CompiledPattern] = []
+        var rejected: [String] = []
+        for pattern in Self.builtInPatterns + policy.extraPatterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+                compiled.append(CompiledPattern(regex: regex))
+            } else {
+                rejected.append(pattern)
+            }
         }
+        patterns = compiled
+        rejectedPatterns = rejected
     }
 
     // MARK: Public entry points
@@ -60,10 +71,12 @@ struct Redactor: Sendable {
         }
     }
 
-    /// Redacts sensitive query values and any credentials in the URL's user info.
+    /// Redacts sensitive query values, sensitive values in a fragment such as `#access_token=…`, and any credentials
+    /// in the URL's user info.
     func redact(url: String) -> String {
-        guard var components = URLComponents(string: url) else {
-            return replacePatterns(in: url)
+        let withoutFragmentSecrets = redactFragment(in: url)
+        guard var components = URLComponents(string: withoutFragmentSecrets) else {
+            return replacePatterns(in: withoutFragmentSecrets)
         }
         components.user = components.user == nil ? nil : Self.placeholder
         components.password = components.password == nil ? nil : Self.placeholder
@@ -72,10 +85,11 @@ struct Redactor: Sendable {
                 isSensitive(key: item.name) ? URLQueryItem(name: item.name, value: Self.placeholder) : item
             }
         }
-        return replacePatterns(in: components.string ?? url)
+        return replacePatterns(in: components.string ?? withoutFragmentSecrets)
     }
 
-    /// JSON bodies get key-based redaction, then every body gets the pattern pass. Non-JSON bodies get only the pattern pass.
+    /// JSON bodies get key-based redaction, then every body gets the pattern pass. Form bodies (`a=b&c=d`) get
+    /// key-based redaction of each pair first. Other bodies get only the pattern pass.
     func redact(body: String) -> String {
         guard let data = body.data(using: .utf8),
             let object = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
@@ -84,7 +98,7 @@ struct Redactor: Sendable {
                 options: [.prettyPrinted, .sortedKeys, .fragmentsAllowed]
             )
         else {
-            return replacePatterns(in: body)
+            return replacePatterns(in: redactFormPairs(in: body))
         }
         return replacePatterns(in: String(decoding: redacted, as: UTF8.self))
     }
@@ -165,12 +179,50 @@ struct Redactor: Sendable {
         return jsonObject
     }
 
+    /// Form bodies and URL fragments: redacts the value of each `key=value` pair whose key is sensitive. Pairs without
+    /// `=`, and keys with spaces, are left to the pattern pass, so ordinary sentences are not reshaped.
+    private func redactFormPairs(in text: String) -> String {
+        guard text.contains("=") else { return text }
+        return text.components(separatedBy: "&").map { pair -> String in
+            guard let equals = pair.firstIndex(of: "=") else { return pair }
+            let rawKey = pair[..<equals]
+            guard !rawKey.isEmpty, !rawKey.contains(where: \.isWhitespace) else { return pair }
+            let key = String(rawKey).replacingOccurrences(of: "+", with: " ").removingPercentEncoding ?? String(rawKey)
+            return isSensitive(key: key) ? "\(rawKey)=\(Self.placeholder)" : pair
+        }.joined(separator: "&")
+    }
+
+    /// An OAuth implicit-flow token arrives in the fragment, as in `#access_token=…&expires_in=3600`.
+    private func redactFragment(in url: String) -> String {
+        guard let hash = url.firstIndex(of: "#") else { return url }
+        let fragment = String(url[url.index(after: hash)...])
+        return String(url[...hash]) + redactFormPairs(in: fragment)
+    }
+
     private func replacePatterns(in text: String) -> String {
         var result = text
         for pattern in patterns {
             result = Self.replace(pattern.regex, in: result)
         }
-        return Self.replaceCardNumbers(in: result)
+        return Self.replaceCardNumbers(in: redactKeyValuePairs(in: result))
+    }
+
+    /// Free text such as log messages, error text and header values. Redacts the value of every `key: value` or
+    /// `key=value` pair whose key is sensitive, including JSON pairs such as `"token":"x"` and escaped ones.
+    private func redactKeyValuePairs(in text: String) -> String {
+        guard let regex = Self.keyValueRegex else { return text }
+        let nsText = text as NSString
+        var result = ""
+        var cursor = 0
+        for match in regex.matches(in: text, range: NSRange(location: 0, length: nsText.length)) {
+            guard isSensitive(key: nsText.substring(with: match.range(at: 2))) else { continue }
+            let valueRange = match.range(at: 3)
+            result += nsText.substring(with: NSRange(location: cursor, length: valueRange.location - cursor))
+            result += Self.placeholder
+            cursor = valueRange.location + valueRange.length
+        }
+        result += nsText.substring(from: cursor)
+        return result
     }
 
     private static func replace(_ regex: NSRegularExpression, in text: String) -> String {
@@ -212,12 +264,22 @@ struct Redactor: Sendable {
 
     private static let cardRegex = try? NSRegularExpression(pattern: #"\b(?:\d[ -]?){12,18}\d\b"#)
 
+    /// A key of letters, digits, `_`, `.` or `-`, optionally quoted (escaped quotes too), then `:` or `=`, then a
+    /// value. The value is a quoted string, or a run up to whitespace, `,`, `;`, `&` or a quote. The key is checked
+    /// by `isSensitive(key:)`, so the list of key words lives in one place.
+    private static let keyValueRegex = try? NSRegularExpression(
+        pattern: #"(\\?["']?)\b([A-Za-z][\w.-]{0,63})\\?\1\s*[:=]\s*(\\?"[^"\r\n]*"?|\\?'[^'\r\n]*'?|[^\s,;&'"]+)"#
+    )
+
     /// Each pattern keeps any leading group it captures (e.g. the "Bearer " scheme word) and replaces the rest.
+    /// Runs are bounded, and the bounded runs are possessive where the next character is not in the run's class, so
+    /// the engine never backtracks through a long run. The JWT starts only where a run of its characters begins, so
+    /// a long run of `eyJ-` is scanned once, not once per `eyJ`. Without these limits a 100k-character run stalled
+    /// capture.
     private static let builtInPatterns: [String] = [
         #"(\b(?:bearer|basic)\s+)[A-Za-z0-9._~+/=\-]+"#,
-        #"(\b(?:authorization|cookie|set-cookie|x-api-key|api[-_ ]?key|password|passcode|secret|token)\s*[:=]\s*)[^\s,;'"&]+"#,
-        #"()\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"#,
-        #"()[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}"#,
+        #"()(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{1,4096}+\.[A-Za-z0-9_-]{1,4096}+\.[A-Za-z0-9_-]{1,4096}"#,
+        #"()[A-Z0-9._%+-]{1,64}+@[A-Z0-9.-]{1,253}\.[A-Z]{2,}"#,
         #"()\+\d{8,15}\b"#,
         #"()\b\d{3}-\d{2}-\d{4}\b"#
     ]
