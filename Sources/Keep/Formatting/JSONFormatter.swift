@@ -34,9 +34,15 @@ enum JSONFormatter {
         parse(text)?.formatted
     }
 
-    /// Finds the first balanced object or array embedded in a string, such as a URL/status followed by JSON.
+    /// Most bracket positions that `splitEmbedded` tries. Each try parses to the end of the string, so the cap keeps a
+    /// string full of brackets from costing quadratic time.
+    private static let maximumEmbeddedCandidates = 16
+
+    /// Finds the first balanced object or array embedded in a string, such as a URL/status followed by JSON. Only the
+    /// first `maximumEmbeddedCandidates` bracket positions are tried.
     static func splitEmbedded(_ string: String) -> (prefix: String, json: String)? {
-        for index in string.indices where string[index] == "{" || string[index] == "[" {
+        let brackets = string.indices.lazy.filter { string[$0] == "{" || string[$0] == "[" }
+        for index in brackets.prefix(maximumEmbeddedCandidates) {
             let suffix = String(string[index...])
             guard let parsed = parse(suffix), parsed.isComplete else { continue }
             let remainder = suffix[parsed.end...]
@@ -61,7 +67,7 @@ enum JSONFormatter {
         guard !tokens.isEmpty else { return nil }
 
         var parser = Parser(text: text, tokens: tokens, failedAt: lexer.failedAt)
-        guard parser.parseValue(depth: 0) else { return nil }
+        guard parser.parseValue(depth: 0), !parser.exceededDepth else { return nil }
         parser.appendUnparsedTail()
         return ParseResult(
             formatted: FormattedText(text: parser.output, spans: parser.spans),
@@ -81,7 +87,16 @@ private struct Parser {
     private(set) var isComplete = true
     private(set) var rootEnd: String.Index?
 
+    /// Deeper nesting than this is not formatted. The viewer shows the raw text instead, and recursion stays shallow.
+    private static let maximumDepth = 256
+    /// Set when nesting passes `maximumDepth`. Unlike other failures, this fails the whole parse, not just a tail.
+    private(set) var exceededDepth = false
+
     mutating func parseValue(depth: Int) -> Bool {
+        guard depth < Self.maximumDepth else {
+            exceededDepth = true
+            return false
+        }
         guard let token = current else { return false }
         switch token.kind {
         case .objectStart: return parseObject(depth: depth)

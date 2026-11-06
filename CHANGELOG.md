@@ -2,13 +2,36 @@
 
 ## 0.5.0 (unreleased)
 
+### Added
+
+- `KeepConfiguration.networkByteBudget` caps the memory that network transactions can hold, counted from their URLs, headers and bodies. When it is reached the oldest transactions go first. The default is 32 MB.
+- `Diagnostics.captureNetwork(on:)` in the copy-in template records the requests of a `URLSessionConfiguration` with one call. Apps need no other Keep import. It does nothing when Keep is not compiled in.
+
 ### Changed
 
 - Keep requires Runestone 0.5.x (from 0.5.2) and TreeSitterLanguages 0.1.x (from 0.1.10). A `from:` requirement on a 0.x version allowed breaking minor releases, so a later minor version is no longer picked up by accident.
+- The build check (`Scripts/keep-verify-excluded.sh`) is an allowlist. It checks every configuration except those in `KEEP_ALLOWED_CONFIGURATIONS`, which defaults to `Debug`. Apps whose internal configurations have `KEEP_ENABLED` must list them, for example `Debug;Development;UAT`, or their builds fail. `KEEP_FORBIDDEN_CONFIGURATIONS` is deprecated. It still forces a check, with a warning, for one release.
+- The build check scans every Mach-O file under the frameworks and plug-ins, not only the executable and the dylibs beside it. It fails when a file or folder cannot be read or listed, or when `CONFIGURATION` is empty. See [ADR 0006](docs/adr/0006-build-check-allowlist.md).
+- The build check reads files in the C locale. In a UTF-8 locale it could miss a marker next to invalid bytes.
 
 ### Fixed
 
 - Reports and HAR files record the Keep version they were made with. They recorded 0.1.0 before.
+- Log messages and metadata strings longer than 64 KB are cut and marked, so one huge message cannot fill the memory or slow redaction.
+- JSON nested deeper than 256 levels is shown as raw text, and finding JSON inside a string tries at most 16 bracket positions.
+- Rows in the log and network lists are identified by ID, so pinning a log entry updates its row without rebuilding the list.
+- Keep removes `keep-…` files that an earlier session left in the temporary directory, including in builds where Keep does not run.
+- Requests whose body is a stream are recorded with their body, and the forwarded request sends the same bytes.
+- Redirects are recorded hop by hop. Before, the request after a redirect bypassed capture.
+
+### Security
+
+- Redaction covers more secrets in text. A `key: value` or `key=value` pair, including JSON such as `"password": "…"` and escaped JSON, has its value redacted when the key is sensitive, for example `access_token`, `refresh_token` or `client_secret`. This applies to log messages, error text, notes, header values and bodies, including a body cut at 256 KB whose JSON no longer parses. Form bodies (`a=b&c=d`) and URL fragments (`#access_token=…`) are redacted pair by pair.
+- `signature`, `session` and `sid` are sensitive keys, so `X-Amz-Signature` and `sessionId` are redacted.
+- Redaction no longer stalls on long runs of letters and digits, which could take many seconds for a few tens of kilobytes.
+- A custom redaction pattern that does not compile is no longer dropped silently. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
+- URLSession capture does nothing unless Keep is running. Before, a build where Keep was not allowed still routed requests through Keep's forwarding session.
+- The forwarding session no longer uses the shared URL cache, which is on disk.
 
 ## 0.4.0 (2026-10-29)
 

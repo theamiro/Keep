@@ -95,6 +95,15 @@ public struct KeepHTTPTransaction: Codable, Hashable, Identifiable, Sendable {
         )
     }
 
+    /// Roughly the memory the transaction holds: its URL, header names and values, and body text. Counted against
+    /// `KeepConfiguration.networkByteBudget`.
+    var approximateByteCost: Int {
+        let headers = Array(requestHeaders) + Array(responseHeaders)
+        let headerBytes = headers.reduce(0) { $0 + $1.key.utf8.count + $1.value.utf8.count }
+        let bodyBytes = (requestBody?.text.utf8.count ?? 0) + (responseBody?.text.utf8.count ?? 0)
+        return url.utf8.count + headerBytes + bodyBytes + (errorDescription?.utf8.count ?? 0)
+    }
+
     /// A single-line curl command that reproduces the request. Only a transaction Keep has stored is redacted, so
     /// build the command from one of those. A transaction made directly from a request has its raw values.
     public var curlCommand: String {

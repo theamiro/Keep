@@ -14,6 +14,10 @@ _Avoid_: debug build, test build, staging build
 An app build distributed to customers. It never contains Keep, whatever its build configuration is called.
 _Avoid_: release build (a "Release" configuration can still be an internal build)
 
+**Allowed configuration**:
+A build configuration that the build check lets contain Keep. It is listed in `KEEP_ALLOWED_CONFIGURATIONS`, and by default only Debug is allowed. The build check checks every other configuration.
+_Avoid_: whitelisted configuration, safe configuration
+
 **Tester**:
 A person running an internal build who reports problems by sharing reports.
 _Avoid_: user, customer

@@ -12,7 +12,7 @@ Use the vocabulary in `CONTEXT.md` (Log entry, Network transaction, Session, Red
 
 These protect the reason Keep exists. Do not change them without an ADR in `docs/adr/` and the user's explicit agreement.
 
-1. **Keep never ships in production.** Only internal app configurations (Development, UAT) get `KEEP_ENABLED`. Pilot and Production exclude Keep and viewer dependency objects; the sample removes Runestone query bundles before running `Scripts/keep-verify-excluded.sh`. The verifier rejects Keep, Runestone and TreeSitter artifacts. Apps import Keep only from one file, `Diagnostics.swift`. Do not add a Keep dependency to a module that every configuration links.
+1. **Keep never ships in production.** Only internal app configurations (Development, UAT) get `KEEP_ENABLED`, and only the configurations listed in `KEEP_ALLOWED_CONFIGURATIONS` may contain Keep (ADR 0006). Pilot and Production exclude Keep and viewer dependency objects; the sample removes Runestone query bundles before running `Scripts/keep-verify-excluded.sh`, which rejects Keep, Runestone and TreeSitter artifacts in every configuration it checks. Apps import Keep only from one file, `Diagnostics.swift`. Do not add a Keep dependency to a module that every configuration links.
 2. **Memory only.** Sessions live in memory. The only disk write is the encrypted crash snapshot (`Storage/CrashSnapshot.swift`). Any new persistence needs an ADR.
 3. **Redaction is always on.** Every capture path must go through `Redactor` on Keep's queue, or through `KeepHTTPTransaction.redacted`. Do not add a way to turn it off.
 4. **Safety checks fail closed.** The build check and the distribution gate must fail when they cannot decide. An unreadable file is an error, not "no match".

@@ -87,7 +87,7 @@ Keep is protected at five layers. The first three keep it out of production buil
 1. **Compile gate.** Add `KEEP_ENABLED` to `SWIFT_ACTIVE_COMPILATION_CONDITIONS` for Development and UAT configurations only. `Diagnostics.swift` compiles to no-ops without it.
 2. **Link exclusion.** For Pilot and Production configurations, exclude `Keep.o` and the Runestone/TreeSitter product objects with `EXCLUDED_SOURCE_FILE_NAMES`. The sample project lists the current object names in its Release configuration.
 3. **Resource cleanup.** Run [`Scripts/keep-strip-viewer-resources.sh`](Scripts/keep-strip-viewer-resources.sh) before the verifier for non-debug configurations to remove the Runestone query bundles.
-4. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after linking and resource cleanup. Set `KEEP_FORBIDDEN_CONFIGURATIONS` to a semicolon-separated list of configuration names (default `Release`). The build fails if Keep, Runestone or TreeSitter code or resources are found, and it fails if the executable cannot be read.
+4. **Build check.** Add [`Scripts/keep-verify-excluded.sh`](Scripts/keep-verify-excluded.sh) as a Run Script build phase after linking and resource cleanup. Set `KEEP_ALLOWED_CONFIGURATIONS` to a semicolon-separated list of the configurations that may contain Keep (default `Debug`). Every other configuration is checked, so list your internal configurations, such as `Development` and `UAT`, if they have `KEEP_ENABLED`. The build fails if Keep, Runestone or TreeSitter code or resources are found in the executable, its dylibs, or any Mach-O file under the frameworks and plug-ins. It also fails when a file or folder cannot be read or listed. See [ADR 0006](docs/adr/0006-build-check-allowlist.md). `KEEP_FORBIDDEN_CONFIGURATIONS` still works for one release, with a warning.
 5. **Runtime kill switch.** `Keep.start` detects how the app was distributed. App Store builds, and builds whose provisioning profile cannot be read, turn Keep off and delete its folder, whatever `allowedDistributions` says.
 
 The example app's Release configuration uses layers 2–4. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
@@ -132,7 +132,7 @@ Keep.record(KeepHTTPTransaction(
 ))
 ```
 
-For URLSession, `KeepURLProtocol.install(on:)` captures traffic from a configuration you choose. It forwards each request through its own session, so the app sees the same responses and redirects. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
+For URLSession, `Diagnostics.captureNetwork(on:)` (or `KeepURLProtocol.install(on:)` directly) captures traffic from a configuration you choose. Call it before creating the session. Capture does nothing when Keep is not running, and it lets a request through untouched in that case. It forwards each request through its own session, so the app sees the same responses and redirects. Requests with a body are captured too, including bodies sent as streams. The forwarding session keeps no URL cache, so responses are not written to disk. Limits: it uses default session settings, background sessions are not captured, and the app's session delegate (for example certificate pinning) does not see the request. Do not use it on sessions that rely on that delegate.
 
 For Alamofire, use an `EventMonitor` that calls `Keep.record`. The copy-in template includes one, guarded by `#if canImport(Alamofire)`.
 
@@ -145,7 +145,7 @@ Shake, then choose *Share report*, or use the Share button in the viewer. Keep a
 - `network.har`: HAR 1.2, which opens in browser dev tools and proxy viewers
 - `device.json`: device and app details
 
-The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself. The zip is removed when the share sheet closes.
+The note is redacted with the same rules as captured text. The tester picks the destination in the share sheet. Keep does not send anything itself. The zip is removed when the share sheet closes. A report from `Keep.exportReport` is yours to delete once you have shared it. Keep removes any `keep-…` files left in the temporary directory at the next launch.
 
 ### Control what testers can share
 
@@ -169,9 +169,9 @@ Quote the path: report names contain the build number in parentheses. It asks fo
 
 ### What is stored, and what is not
 
-- **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Killing the app clears them.
+- **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Network transactions are also capped by `networkByteBudget` (32 MB by default). Each log message or metadata string is cut at 64 KB. Killing the app clears them.
 - **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with `completeFileProtectionUntilFirstUserAuthentication`, so it is protected until first unlock. The next launch reads it, deletes it, and offers it as *Share crashed session*.
-- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials and sensitive query values, sensitive JSON keys, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token` and `apiKey` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own.
+- **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials, sensitive query values and `#access_token=` fragments, sensitive JSON keys, sensitive `key=value` pairs in text, form bodies and escaped JSON, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token`, `apiKey` and `refresh_token` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own. A custom pattern that does not compile is not applied. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
 
 ### Limits
 
