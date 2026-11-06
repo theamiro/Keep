@@ -1,7 +1,7 @@
 import Foundation
 
 enum KeepInfo {
-    static let version = "0.1.0"
+    static let version = "0.5.0"
 }
 
 /// Device and app facts included with every report (device.json and the header of report.txt).

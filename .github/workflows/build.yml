@@ -13,16 +13,44 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v7
+            - name: Select the pinned Xcode
+              uses: maxim-lobanov/setup-xcode@v1
+              with:
+                  xcode-version: "26.5"
             - name: Perform Build Validation
               run: swift build -v
             - name: Run Tests
               run: swift test
             - name: Build UIKit sources for iOS Simulator
               run: xcodebuild -scheme Keep -destination 'generic/platform=iOS Simulator' build
+            - name: Run the iOS test suite on a simulator
+              run: |
+                  # The Keep-Package scheme is generated from the package, so it runs without a checked-in scheme.
+                  udid="$(xcrun simctl list devices available -j | python3 -c '
+                  import json, sys
+                  devices = json.load(sys.stdin)["devices"]
+                  for runtime, entries in devices.items():
+                      if "iOS" not in runtime:
+                          continue
+                      for entry in entries:
+                          if entry.get("isAvailable") and entry["name"].startswith("iPhone"):
+                              print(entry["udid"])
+                              sys.exit(0)
+                  sys.exit("no available iPhone simulator")
+                  ')"
+                  xcodebuild -scheme Keep-Package -destination "platform=iOS Simulator,id=$udid" test
             - name: Test verification script
               run: sh Scripts/keep-verify-excluded.test.sh
             - name: Test release notes script
               run: sh Scripts/keep-release-notes.test.sh
+            - name: Test viewer resource cleanup script
+              run: sh Scripts/keep-strip-viewer-resources.test.sh
+            - name: Check the two Diagnostics templates are identical
+              run: cmp Templates/Diagnostics.swift KeepiOSExample/KeepiOSExample/Diagnostics.swift
+            - name: Lint against the committed baseline
+              run: |
+                  command -v swiftlint > /dev/null || brew install swiftlint
+                  swiftlint lint --baseline .swiftlint-baseline.json
             - name: Build example Release and verify Keep is excluded
               run: >
                 xcodebuild -project KeepiOSExample/KeepiOSExample.xcodeproj -scheme KeepiOSExample
@@ -72,3 +100,24 @@ jobs:
                       exit 1
                   fi
                   echo "CHANGELOG.md names v$version, the $bump release after v$latest."
+            - name: Check the version Keep reports matches CHANGELOG.md
+              run: |
+                  if [ "$BASE_REF" = develop ] && sh Scripts/keep-release-notes.sh version > /dev/null 2>&1; then
+                      exit 0
+                  fi
+                  if [ "$BASE_REF" = main ]; then
+                      top="$(sh Scripts/keep-release-notes.sh version)"
+                  else
+                      top="$(sh Scripts/keep-release-notes.sh pending)"
+                  fi
+                  # Exactly one KeepInfo.version line is expected. Zero or several lines fail, rather than pass.
+                  reported="$(sed -n 's/^ *static let version = "\([0-9][0-9.]*\)"$/\1/p' Sources/Keep/Export/DeviceContext.swift)"
+                  if [ -z "$reported" ] || [ "$(printf '%s\n' "$reported" | wc -l)" -ne 1 ]; then
+                      echo "::error::Cannot read exactly one KeepInfo.version in Sources/Keep/Export/DeviceContext.swift."
+                      exit 1
+                  fi
+                  if [ "$reported" != "$top" ]; then
+                      echo "::error::KeepInfo.version is $reported, but CHANGELOG.md names $top. Update KeepInfo.version to match."
+                      exit 1
+                  fi
+                  echo "Keep reports v$reported, which matches CHANGELOG.md."

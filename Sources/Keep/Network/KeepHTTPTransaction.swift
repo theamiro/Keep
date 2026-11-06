@@ -104,7 +104,8 @@ public struct KeepHTTPTransaction: Codable, Hashable, Identifiable, Sendable {
         return url.utf8.count + headerBytes + bodyBytes + (errorDescription?.utf8.count ?? 0)
     }
 
-    /// A single-line curl command that reproduces the request. Values are already redacted.
+    /// A single-line curl command that reproduces the request. Only a transaction Keep has stored is redacted, so
+    /// build the command from one of those. A transaction made directly from a request has its raw values.
     public var curlCommand: String {
         var parts = ["curl", "-X", method, Self.shellQuoted(url)]
         for (name, value) in requestHeaders.sorted(by: { $0.key < $1.key }) {

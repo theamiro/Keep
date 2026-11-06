@@ -9,12 +9,14 @@
 
 ### Changed
 
+- Keep requires Runestone 0.5.x (from 0.5.2) and TreeSitterLanguages 0.1.x (from 0.1.10). A `from:` requirement on a 0.x version allowed breaking minor releases, so a later minor version is no longer picked up by accident.
 - The build check (`Scripts/keep-verify-excluded.sh`) is an allowlist. It checks every configuration except those in `KEEP_ALLOWED_CONFIGURATIONS`, which defaults to `Debug`. Apps whose internal configurations have `KEEP_ENABLED` must list them, for example `Debug;Development;UAT`, or their builds fail. `KEEP_FORBIDDEN_CONFIGURATIONS` is deprecated. It still forces a check, with a warning, for one release.
 - The build check scans every Mach-O file under the frameworks and plug-ins, not only the executable and the dylibs beside it. It fails when a file or folder cannot be read or listed, or when `CONFIGURATION` is empty. See [ADR 0006](docs/adr/0006-build-check-allowlist.md).
 - The build check reads files in the C locale. In a UTF-8 locale it could miss a marker next to invalid bytes.
 
 ### Fixed
 
+- Reports and HAR files record the Keep version they were made with. They recorded 0.1.0 before.
 - Log messages and metadata strings longer than 64 KB are cut and marked, so one huge message cannot fill the memory or slow redaction.
 - JSON nested deeper than 256 levels is shown as raw text, and finding JSON inside a string tries at most 16 bracket positions.
 - Rows in the log and network lists are identified by ID, so pinning a log entry updates its row without rebuilding the list.
@@ -30,7 +32,6 @@
 - A custom redaction pattern that does not compile is no longer dropped silently. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
 - URLSession capture does nothing unless Keep is running. Before, a build where Keep was not allowed still routed requests through Keep's forwarding session.
 - The forwarding session no longer uses the shared URL cache, which is on disk.
-
 
 ## 0.4.0 (2026-10-29)
 

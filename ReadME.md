@@ -30,7 +30,7 @@ Add Keep to your package manifest and pin a released version. Releases are tagge
 dependencies: [
     .package(
         url: "https://github.com/theamiro/Keep.git",
-        from: "0.1.1"
+        from: "0.4.0"
     )
 ]
 ```
@@ -93,6 +93,8 @@ Keep is protected at five layers. The first three keep it out of production buil
 The example app's Release configuration uses layers 2–4. Its Debug configuration has `KEEP_ENABLED`. See `KeepiOSExample/KeepiOSExample.xcodeproj`.
 
 > **Limit of layer 5.** An Ad Hoc build of a production configuration looks the same as an internal Ad Hoc build at runtime, so the runtime check cannot tell them apart. Layers 1–4 are the build-time guard for those builds.
+>
+> **TestFlight is on by default.** `allowedDistributions` includes TestFlight builds, so Keep runs in them unless you remove `.testFlight` from that set.
 
 ### Open the log viewer
 
@@ -102,7 +104,7 @@ The example app's Release configuration uses layers 2–4. Its Debug configurati
 
 The viewer groups pinned logs first and shows compact time, level, source and message rows. Search the logs and filter with **All**, **Info+**, **Warn+** or **Error**. Network rows show the method, status, path, duration and response size; their scope filters are **All**, **2xx**, **4xx**, **5xx** and **Failed**.
 
-Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed and syntax-highlighted, including JSON embedded in a response string. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. The **Share** button on a detail opens a menu. **Copy all** copies the complete plain-text detail, and **Share text** shares that text. Log details also offer **Share as file**. Network details offer **Copy cURL**, **Copy all**, **Share cURL** and **Share HAR file**. Shared files are removed when the share sheet closes. `configuration.sharing` can limit these actions, see [Control what testers can share](#control-what-testers-can-share).
+Log and network details use separate sections for fields, headers and bodies. JSON bodies are pretty-printed, including JSON embedded in a response string. Syntax highlighting is in Debug builds only (`KEEP_RUNESTONE`), and other builds show plain text. Each code block has a **Wrap** toggle, **Copy** button and long-press options for copying formatted or raw text. The **Share** button on a detail opens a menu. **Copy all** copies the complete plain-text detail, and **Share text** shares that text. Log details also offer **Share as file**. Network details offer **Copy cURL**, **Copy all**, **Share cURL** and **Share HAR file**. Shared files are removed when the share sheet closes. `configuration.sharing` can limit these actions, see [Control what testers can share](#control-what-testers-can-share).
 
 Register your own tools so they appear in the shake menu:
 
@@ -168,7 +170,7 @@ Quote the path: report names contain the build number in parentheses. It asks fo
 ### What is stored, and what is not
 
 - **Logs and network transactions** are kept in memory only, capped at `memoryCapacity` and `networkCapacity`. Network transactions are also capped by `networkByteBudget` (32 MB by default). Each log message or metadata string is cut at 64 KB. Killing the app clears them.
-- **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with complete file protection. The next launch reads it, deletes it, and offers it as *Share crashed session*.
+- **Crash snapshot.** On an uncaught Objective-C exception, Keep writes the session to `Application Support/Keep/crash-snapshot.bin`. The file is AES-GCM encrypted with a 256-bit key in the Keychain (`AfterFirstUnlockThisDeviceOnly`), excluded from backup, and written with `completeFileProtectionUntilFirstUserAuthentication`, so it is protected until first unlock. The next launch reads it, deletes it, and offers it as *Share crashed session*.
 - **Redaction** runs before anything is stored. It covers bearer and basic credentials, JWTs, `Authorization`, `Cookie` and `X-Api-Key` headers, URL credentials, sensitive query values and `#access_token=` fragments, sensitive JSON keys, sensitive `key=value` pairs in text, form bodies and escaped JSON, emails, E.164 phone numbers, SSNs, and card numbers that pass the Luhn check. The same rules apply to error text, to the note in a report, and to the user identifier the app sets. Keys are matched by token, so `authorization_token`, `apiKey` and `refresh_token` are redacted and `author` is not. Use `allowedKeys` for values you need to see, and `extraKeys` or `extraPatterns` for your own. A custom pattern that does not compile is not applied. Keep records it as a critical entry when it starts, and debug builds stop on an assertion.
 
 ### Limits
